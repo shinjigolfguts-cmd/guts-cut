@@ -175,3 +175,8 @@ body:has(#editor:not([hidden])){position:fixed;inset:0;width:100%;height:100%;}
 #editor{overscroll-behavior:none;overflow:hidden}
 #editor .preview,#editor #canvas{touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #panel,#toolbar{overscroll-behavior:contain}
+
+/* Keep creation controls near the wordmark, independent of viewport height. */
+body #home.native-home{min-height:100svh;justify-content:flex-start}
+body .native-home-header{padding-top:32px}
+body .native-home-content{margin-top:0;padding-top:72px}
