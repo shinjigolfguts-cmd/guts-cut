@@ -17,7 +17,7 @@ python3 -m http.server 8080 --directory dist
 - 元コミット: `235f589e84b8a89bfb4084cf945155d32acc0178`
 - 稼働中: https://guts-studio-editor.golfguts0702.chatgpt.site
 - このリポジトリへの保存で既存サイトの公開設定は変更していません。
-- SitesとGitHub間の自動同期は未設定です。
+- Sites → GitHubの一方向自動保存を設定済みです。ChatGPTのクラウドタスクが毎時10分（日本時間）に差分を確認します。即時同期・双方向同期ではありません。GitHub側の独自変更は上書きせず停止して通知します。詳細は `SYNC.md`。
 
 ## 配色
 
@@ -26,3 +26,9 @@ python3 -m http.server 8080 --directory dist
 ## 実装状況
 
 実装・検証履歴と未実装項目は `docs/reference-status.md` を参照してください。InShotとの完全な機能互換ではありません。端末によって動画書き出し形式が異なり、実機iPhoneでの全機能確認は未完了です。
+
+## 自動保存タスク
+
+- タスク: `Automation_2fdbe9342a1c819198cd6973c0a25de1`
+- 有効化: 2026-10-31
+- 現時点のソース取得・GitHub書き込み・内容一致は確認済み。初回定期実行は未確認です。
