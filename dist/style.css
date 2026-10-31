@@ -180,3 +180,10 @@ body:has(#editor:not([hidden])){position:fixed;inset:0;width:100%;height:100%;}
 body #home.native-home{min-height:100svh;justify-content:flex-start}
 body .native-home-header{padding-top:32px}
 body .native-home-content{margin-top:0;padding-top:72px}
+
+/* Clear collage photo removal controls. */
+#pickerGallery{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px;align-content:start}body #pickerGallery span{width:auto;height:36px;min-width:62px;padding:0 10px;line-height:36px;border-radius:18px;font-size:14px;font-weight:700;top:5px;right:5px}#pickerGallery button.chosen canvas{opacity:1}#pickerGallery button:not(.chosen):not(.picker-add) canvas{opacity:.3}body .picker-tabs #pickerDone{font-size:15px;background:var(--accent);color:var(--base);border-radius:12px;min-height:44px;padding:10px 12px}.picker-preview span{font-size:12px;color:var(--ink)}
+
+.photo-actions{display:flex;gap:12px;padding:16px}.photo-actions button{flex:1;min-height:52px;background:var(--card);color:var(--ink);border-radius:12px;font-size:16px;font-weight:bold}#resumeEdit{display:block;margin:24px auto;padding:16px 24px;background:var(--accent);color:var(--base);border-radius:14px;font-weight:bold}
+
+.line-presets{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:8px}.line-presets button,#freehandMode{min-height:44px;padding:10px;background:var(--card);color:var(--ink);border-radius:10px;font-size:14px}.line-setting{display:flex;align-items:center;gap:12px;padding:8px 12px}.line-setting input{flex:1;min-width:0}#freehandMode{margin:8px 12px}
