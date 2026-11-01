@@ -195,3 +195,9 @@ body #undo svg,body #redo svg{height:25px!important;width:25px!important}body #u
 body #panel,body #toolbar{transition:none!important;flex-shrink:0}body #panel.open{max-height:42dvh;overflow:auto}body #toolbar{min-height:76px;overflow-x:auto}
 body .line-presets svg{display:block;width:100%;height:36px}body .line-presets button{background:#999!important;min-height:48px}
 .canvas-tabs,.ratio-options{display:flex;gap:10px;padding:12px;overflow-x:auto}.canvas-tabs button{flex:1}.ratio-options button{min-width:68px;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}.ratio-options span{border:2px solid currentColor;display:block}.canvas-tabs .selected,.ratio-options .selected{background:#4F6B57!important;color:white!important}#canvasOptions{padding:12px}body #pickerBack{min-width:84px!important;font-size:18px!important}body .picker-tabs{position:sticky;top:0;z-index:5}
+
+/* History is a separate row, never a flex sibling of the preview canvas. */
+body #editor > .playbar{width:100%;max-width:100%;justify-content:flex-start;background:var(--base)!important;border-radius:0}
+body #editor > .preview{width:100%;min-width:0}
+body #editor > .playbar #redo{margin-left:0}
+body[data-mode="video"] #editor > .playbar #redo{margin-left:auto}

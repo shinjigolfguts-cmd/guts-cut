@@ -2,14 +2,14 @@
   "schema_version": 1,
   "project_id": "appgprj_6ae595af47b0819185f5e11d6e65ceea",
   "direction": "sites-to-github",
-  "source_commit": "308bc44c7ab80fa0d633ad382ef7d4efd0f33e22",
+  "source_commit": "b5fa9b5a8d4737b8023012ad02f1bdfe17f2aacf",
   "files": {
     ".openai/hosting.json": {
       "sha": "02c1b2b71ed5a9824db2ef890f60f1eab4157597",
       "mode": "100644"
     },
     "dist/app.js": {
-      "sha": "185d468eff77cb7276206d82966eb3e6c3694d21",
+      "sha": "ed71f3946c38c4645eaac3b2fe5056d1c9e6c3ee",
       "mode": "100644"
     },
     "dist/assets/home-reference.jpeg": {
@@ -21,7 +21,7 @@
       "mode": "100644"
     },
     "dist/style.css": {
-      "sha": "192327743814ba25d007894f4c05c55263c499b9",
+      "sha": "d38daa801e9a2d91663533f4a742ac023ce42a39",
       "mode": "100644"
     },
     "dist/video-timeline.js": {
