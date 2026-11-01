@@ -2,14 +2,14 @@
   "schema_version": 1,
   "project_id": "appgprj_6ae595af47b0819185f5e11d6e65ceea",
   "direction": "sites-to-github",
-  "source_commit": "8e1d9082eb040d988b0ce9982f7ec56ea3ca1f2c",
+  "source_commit": "ae4bd4141f614ec2243fb4efad65972b64a183cd",
   "files": {
     ".openai/hosting.json": {
       "sha": "02c1b2b71ed5a9824db2ef890f60f1eab4157597",
       "mode": "100644"
     },
     "dist/app.js": {
-      "sha": "0f0e771f9e89b1896b6da6b68aa24e8dd9446406",
+      "sha": "b629e964c8d516da9ae53f20f2190148daf25123",
       "mode": "100644"
     },
     "dist/assets/home-reference.jpeg": {
