@@ -45,13 +45,15 @@ timelineScroll.addEventListener('wheel',e=>{if(busy||!media[0])return;e.preventD
 async function buildVideoFilmstrip(){
  const generation=++filmstripGeneration,m=media[0];if(!m||m.type!=='video')return;
  const root=$('#filmstrip');root.replaceChildren();$('#timeRuler').replaceChildren();
- const duration=m.el.duration,totalWidth=duration*pixelsPerSecond,count=Math.max(1,Math.min(100,Math.ceil(totalWidth/44)));
+ const duration=m.el.duration,totalWidth=duration*pixelsPerSecond,count=Math.max(1,Math.min(12,Math.ceil(totalWidth/44)));
  for(let i=0;i<=duration;i+=duration>120?10:5){let tick=document.createElement('span');tick.textContent=preciseTime(i);tick.style.left=i*pixelsPerSecond+'px';$('#timeRuler').append(tick)}
  const probe=document.createElement('video');probe.muted=true;probe.playsInline=true;probe.preload='auto';
  try{
   await new Promise((resolve,reject)=>{probe.onloadeddata=resolve;probe.onerror=reject;probe.src=m.url});
   for(let i=0;i<count;i++){
-   if(generation!==filmstripGeneration)return;
+   if(generation!==filmstripGeneration||media[0]!==m)return;
+   while(!m.el.paused||busy||drag||timelineDrag){await new Promise(r=>setTimeout(r,250));if(generation!==filmstripGeneration||media[0]!==m)return;}
+   await new Promise(r=>setTimeout(r,80));
    const t=Math.min(duration-.001,(i+.5)*duration/count);
    await new Promise((resolve,reject)=>{if(Math.abs(probe.currentTime-t)<.001)return resolve();const timer=setTimeout(()=>reject(Error('timeout')),4000);probe.onseeked=()=>{clearTimeout(timer);resolve()};probe.currentTime=t});
    if(generation!==filmstripGeneration)return;
