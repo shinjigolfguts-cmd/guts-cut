@@ -17,7 +17,7 @@ let collageLoadGeneration=0,collageLoading=false;
 function reset(){collageLoadGeneration++;collageLoading=false;media.forEach(m=>{if(m.type==='video')m.el.pause();URL.revokeObjectURL(m.url)});media=[];layers=[];history=[];future=[];pendingHistory=null;selected=-1;window.resetVideoTimeline?.();ratio='1:1';filter='none';speed=volume=1;start=end=gap=0;bg='#FFFFFF';layout='grid';audioSource=null;audioDest=null;if(audioCtx){audioCtx.close();audioCtx=null}$('#thumbs').replaceChildren();$('#empty').hidden=false;$('#panel').classList.remove('open');active='';document.body.dataset.panel='';painting=false;$('#toolbar').hidden=false;resize()}
 function choose(m){if(busy)return;reset();mode=m;$('#home').hidden=true;$('#editor').hidden=false;$('#modeTitle').textContent='編集';document.body.dataset.mode=m;$('.preview').after($('.playbar'));let keys=m==='video'?['canvas','filter','text','sticker','trim','speed','volume','rotate']:m==='collage'?['canvas','addphoto','gallery','layout','paint','text','sticker','border','filter','effect','effects','rotate']:['canvas','paint','filter','effect','effects','portrait','sticker','text','pip','rotate'];$('#panel').after($('#toolbar'));$('#toolbar').innerHTML=keys.map(k=>`<button data-tool="${k}"><b>${uiIcon(k)}</b><span>${icons[k][1]}</span></button>`).join('');document.body.dataset.panel='';$('#batchEdit').hidden=m!=='photo';openFile()}
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>choose(b.dataset.mode));$('#toolbar').onclick=e=>{let b=e.target.closest('[data-tool]');if(b&&!busy)panel(b.dataset.tool)};
-function openFile(){if(busy||collageLoading)return;$('#file').accept=mode==='video'?'video/*':'image/*';$('#file').multiple=mode!=='photo';$('#file').value='';$('#file').click()}$('#add').onclick=openFile;$('#back').onclick=()=>{if(busy)return;if(active){closePanel();return}media.forEach(m=>m.el.pause?.());$('#collagePicker').hidden=true;$('#editor').hidden=true;$('#home').hidden=false;let resume=$('#resumeEdit');if(!resume){resume=document.createElement('button');resume.id='resumeEdit';resume.textContent='編集中の作品に戻る';$('#home').append(resume)}resume.hidden=!media.length;resume.onclick=()=>{$('#home').hidden=true;$('#editor').hidden=false;resize()}};$('#closeDialog').onclick=()=>$('#dialog').close();
+function openFile(){if(busy||collageLoading)return;if(mode==='video')enableSnapFeedback();$('#file').accept=mode==='video'?'video/*':'image/*';$('#file').multiple=mode!=='photo';$('#file').value='';$('#file').click()}$('#add').onclick=openFile;$('#back').onclick=()=>{if(busy)return;if(active){closePanel();return}media.forEach(m=>m.el.pause?.());$('#collagePicker').hidden=true;$('#editor').hidden=true;$('#home').hidden=false;let resume=$('#resumeEdit');if(!resume){resume=document.createElement('button');resume.id='resumeEdit';resume.textContent='編集中の作品に戻る';$('#home').append(resume)}resume.hidden=!media.length;resume.onclick=()=>{$('#home').hidden=true;$('#editor').hidden=false;resize()}};$('#closeDialog').onclick=()=>$('#dialog').close();
 async function saveSelectedVideos(files){
  const sheet=document.createElement('dialog');
  sheet.className='clip-readiness';
@@ -31,15 +31,14 @@ async function saveSelectedVideos(files){
  try{
  let blob;try{blob=await new Promise((resolve,reject)=>{
  worker=new Worker('video-join-worker.js?v=6');
- worker.onmessage=({data})=>{if(data.error)reject(new Error(data.error));else if(data.blob)resolve(data.blob);else if(data.ready)progress(Math.floor(95*data.ready/files.length))};
+ worker.onmessage=({data})=>{if(data.error)reject(new Error(data.error));else if(data.blob)resolve(data.blob);else if(data.ready)progress(Math.floor(5*data.ready/files.length))};
  worker.onerror=()=>reject(new Error('動画を読み込めませんでした'));worker.postMessage(files)
  });
  }catch(joinError){
- worker?.terminate();title.textContent='撮影設定が異なる動画を結合';status.textContent='元の動画はそのまま、再圧縮して1本にします。画質が変わる場合があります。保存まで画面を開いてください。';
- const cancel=document.createElement('button');cancel.textContent='キャンセル';sheet.append(cancel);cancel.onclick=close;
- button.textContent='変換して結合';button.hidden=false;
- blob=await new Promise((resolve,reject)=>{button.onclick=()=>{button.hidden=true;cancel.remove();title.textContent='動画を変換中';progress(0);renderCompatibleVideo(files,progress).then(resolve,reject)};cancel.onclick=()=>{cancel.remove();close();resolve(null)}});
- if(!blob)return;status.textContent='';button.textContent='動画を保存';
+ worker?.terminate();title.textContent='動画編集中';status.textContent='動画を1本にまとめています。';progress(5);
+ blob=await renderCompatibleVideo(files,n=>progress(5+Math.floor(93*n/98)),window.rotationAudio);
+ status.textContent='';
+
  }
  worker?.terminate();progress(99);title.textContent='保存準備完了';
  const file=new File([blob],blob.type.includes('webm')?'In-GUTS.webm':'In-GUTS.mp4',{type:blob.type});
