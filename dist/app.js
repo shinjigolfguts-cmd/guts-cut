@@ -43,13 +43,18 @@ async function saveSelectedVideos(files){
  }
  worker?.terminate();progress(99);title.textContent='保存準備完了';
  const file=new File([blob],blob.type.includes('webm')?'In-GUTS.webm':'In-GUTS.mp4',{type:blob.type});
+ const abandon=document.createElement('button');abandon.textContent='キャンセル';abandon.hidden=true;abandon.onclick=close;sheet.append(abandon);
  async function save(){
- button.disabled=true;
+ button.disabled=true;abandon.hidden=true;sheet.oncancel=e=>e.preventDefault();
  try{
  if(navigator.canShare?.({files:[file]})){await navigator.share({files:[file]});title.textContent='保存操作完了'}
  else{download(blob,file.name.split('.').pop());title.textContent='ダウンロード開始'}
  progress(100);status.textContent='';button.textContent='完了';button.onclick=()=>{close();reset();$('#editor').hidden=true;$('#home').hidden=false}
- }catch(e){status.textContent='「動画を保存」を押して保存先を選んでください。';button.onclick=save}
+ }catch(e){
+ status.textContent=e.name==='AbortError'?'保存をキャンセルしました。結合済みの動画をもう一度保存できます。':'「動画を保存」を押して保存先を選んでください。';
+ button.textContent='動画を保存';button.onclick=save;abandon.hidden=false;
+ sheet.oncancel=event=>{event.preventDefault();close()}
+ }
  finally{button.hidden=false;button.disabled=false}
  }
  button.onclick=save;await save()
