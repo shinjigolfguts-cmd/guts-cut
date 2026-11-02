@@ -2,7 +2,7 @@
   "schema_version": 1,
   "project_id": "appgprj_6ae595af47b0819185f5e11d6e65ceea",
   "direction": "sites-to-github",
-  "source_commit": "315ed0da7f961f957fdbde3fa089ebaa8c18fe1c",
+  "source_commit": "4d77f9bea97cc4360e66f753cba1334b6e42807d",
   "files": {
     ".openai/hosting.json": {
       "mode": "100644",
@@ -16,13 +16,25 @@
       "mode": "100644",
       "sha": "e22af64bc785151a32abcf13c08651893e2ae05c"
     },
+    "dist/assets/in-guts-g-180.png": {
+      "mode": "100644",
+      "sha": "71556a74db99cc04bdd08593bfc7804e3d9f4792"
+    },
+    "dist/assets/in-guts-g-192.png": {
+      "mode": "100644",
+      "sha": "c702d2e727553bf3ef144b35c310b1f1045778f1"
+    },
+    "dist/assets/in-guts-g-512.png": {
+      "mode": "100644",
+      "sha": "57e4780d93f53762c4f018ad521dfdb06b8fe289"
+    },
     "dist/index.html": {
       "mode": "100644",
-      "sha": "62ac662c1836f7a2c7f3a3de416e50b2584c2429"
+      "sha": "5a87dc28c1cd7bfbea34d9d6fc9a2cad3502f50c"
     },
     "dist/manifest.webmanifest": {
       "mode": "100644",
-      "sha": "45867500c9762bebaa6e5fd2615228db79166171"
+      "sha": "90e7cffbc4a2c72430edf0aecce23349e5d9e164"
     },
     "dist/style.css": {
       "mode": "100644",
