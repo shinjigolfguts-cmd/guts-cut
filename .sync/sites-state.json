@@ -2,7 +2,7 @@
   "schema_version": 1,
   "project_id": "appgprj_6ae595af47b0819185f5e11d6e65ceea",
   "direction": "sites-to-github",
-  "source_commit": "f86d59e230d51061fc2eac05a591a8f022b2c560",
+  "source_commit": "dd42f9664fefd1d274751917f6828e12719982bd",
   "files": {
     ".openai/hosting.json": {
       "mode": "100644",
@@ -10,7 +10,7 @@
     },
     "dist/app.js": {
       "mode": "100644",
-      "sha": "241d7ad1bef470e26d7345fbbdfbd63da29b6f4d"
+      "sha": "8d37ca548dc9d18eb5bff22e1f3595aeb200dbbd"
     },
     "dist/assets/home-reference.jpeg": {
       "mode": "100644",
@@ -34,7 +34,7 @@
     },
     "dist/index.html": {
       "mode": "100644",
-      "sha": "f70f1dd54996f6f76eb835d4a4b1bbcb1ad309a1"
+      "sha": "7538590e01f46f54199bacb2e08aa64d45392c35"
     },
     "dist/manifest.webmanifest": {
       "mode": "100644",
@@ -46,11 +46,11 @@
     },
     "dist/video-join-worker.js": {
       "mode": "100644",
-      "sha": "b53e7ac8e9264be380943d50551bfc43b2933c06"
+      "sha": "df2ba301d6e05c58ea84c0d7eb2b20753f08c58d"
     },
     "dist/video-join.js": {
       "mode": "100644",
-      "sha": "e1fcee1bcdc586136c506e18d2b779ff9b05a687"
+      "sha": "63f6ee9d6edc48055f859fc3e87499ccba29af80"
     },
     "dist/video-timeline.js": {
       "mode": "100644",

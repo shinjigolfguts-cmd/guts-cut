@@ -30,7 +30,7 @@ async function saveSelectedVideos(files){
  function close(){sheet.close();sheet.remove()}
  try{
  let blob;try{blob=await new Promise((resolve,reject)=>{
- worker=new Worker('video-join-worker.js?v=5');
+ worker=new Worker('video-join-worker.js?v=6');
  worker.onmessage=({data})=>{if(data.error)reject(new Error(data.error));else if(data.blob)resolve(data.blob);else if(data.ready)progress(Math.floor(95*data.ready/files.length))};
  worker.onerror=()=>reject(new Error('動画を読み込めませんでした'));worker.postMessage(files)
  });

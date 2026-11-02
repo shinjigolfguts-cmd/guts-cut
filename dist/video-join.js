@@ -63,10 +63,19 @@ async function joinVideos(files, onReady = () => {}) {
  else if(['sgpd','stsd','dinf'].includes(k)&&ps.some(a=>!same(a,p)))fail();
  result.push(box(k==='stco'?'co64':k,data))}
  return cat(result)}
- const gs=packs.map(x=>x.moov.filter(box=>{
- if(box.k!=='trak')return true;
- const md=children(box.p).find(x=>x.k==='mdia');const handler=children(md.p).find(x=>x.k==='hdlr');
- return ['vide','soun'].includes(dec.decode(handler.p.subarray(8,12)))
- }));if(gs.some(g=>!g.some(x=>x.k==='trak')))fail();if(gs.some(g=>g.filter(x=>x.k==='trak').length!==gs[0].filter(x=>x.k==='trak').length))fail();
+ function trackType(track){
+  const md=children(track.p).find(x=>x.k==='mdia');
+  const handler=children(md.p).find(x=>x.k==='hdlr');
+  return dec.decode(handler.p.subarray(8,12))
+ }
+ const gs=packs.map(({moov})=>{
+  const tracks=moov.filter(x=>x.k==='trak').map(track=>({track,type:trackType(track)}))
+   .filter(({type})=>type==='vide'||type==='soun');
+  // Track IDs and physical order are local to each input. Match by media kind.
+  tracks.sort((a,b)=>a.type===b.type?0:a.type==='vide'?-1:1);
+  return [...moov.filter(x=>x.k!=='trak'),...tracks.map(x=>x.track)]
+ });
+ const layout=g=>g.filter(x=>x.k==='trak').map(trackType).join(',');
+ if(!layout(gs[0]).includes('vide')||gs.some(g=>layout(g)!==layout(gs[0])))fail();
  header=box('moov',merge(gs,'moov'));return new Blob([first,...mediaParts,header],{type:'video/mp4'})
 }
