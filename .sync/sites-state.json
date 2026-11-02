@@ -2,35 +2,35 @@
   "schema_version": 1,
   "project_id": "appgprj_6ae595af47b0819185f5e11d6e65ceea",
   "direction": "sites-to-github",
-  "source_commit": "b3b9b15e01c39c8e73a7e388951a8834e08874af",
+  "source_commit": "17e0abeeaf7c4093723650d10190224d1062839c",
   "files": {
     ".openai/hosting.json": {
-      "sha": "02c1b2b71ed5a9824db2ef890f60f1eab4157597",
-      "mode": "100644"
+      "mode": "100644",
+      "sha": "02c1b2b71ed5a9824db2ef890f60f1eab4157597"
     },
     "dist/app.js": {
-      "sha": "c2c60d09d12bc45727d9cadd01dc3357a4eff2bf",
-      "mode": "100644"
+      "mode": "100644",
+      "sha": "c4622fa09fcbb476a5819aa4e892a8933595922d"
     },
     "dist/assets/home-reference.jpeg": {
-      "sha": "e22af64bc785151a32abcf13c08651893e2ae05c",
-      "mode": "100644"
+      "mode": "100644",
+      "sha": "e22af64bc785151a32abcf13c08651893e2ae05c"
     },
     "dist/index.html": {
-      "sha": "0aa5ad4f935c613568668d871347c83b859a51ad",
-      "mode": "100644"
+      "mode": "100644",
+      "sha": "0aa5ad4f935c613568668d871347c83b859a51ad"
     },
     "dist/style.css": {
-      "sha": "d38daa801e9a2d91663533f4a742ac023ce42a39",
-      "mode": "100644"
+      "mode": "100644",
+      "sha": "d38daa801e9a2d91663533f4a742ac023ce42a39"
     },
     "dist/video-timeline.js": {
-      "sha": "63de2b50b8b967358fae6a7702d00a00f3523a75",
-      "mode": "100644"
+      "mode": "100644",
+      "sha": "63de2b50b8b967358fae6a7702d00a00f3523a75"
     },
     "docs/reference-status.md": {
-      "sha": "595053a413cfa15e3000681fd330e1399a6f2c6d",
-      "mode": "100644"
+      "mode": "100644",
+      "sha": "595053a413cfa15e3000681fd330e1399a6f2c6d"
     }
   }
 }
