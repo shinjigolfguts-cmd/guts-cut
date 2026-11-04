@@ -38,11 +38,10 @@ async function offerVideoSplit(blob,knownDuration){
  try{
  const ext=part.type.includes('webm')?'webm':'mp4',name='In-GUTS-'+String(index+1).padStart(2,'0')+'-of-'+ranges.length+'.'+ext;
  const file=new File([part],name,{type:part.type});
- if(navigator.canShare?.({files:[file]}))await navigator.share({files:[file]});
- else{const a=document.createElement('a'),url=URL.createObjectURL(part);a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000)}
+ downloadVideoFile(part,name);
  if(stopped)return;index++;part=null;
- if(index===ranges.length){h.textContent='すべての保存操作が完了';status.textContent='保存先は端末でご確認ください。';yes.textContent='完了';yes.onclick=()=>close(true);cancel.hidden=true;yes.disabled=false}
- else{h.textContent=index+' / '+ranges.length+'本の保存操作が完了';status.textContent='次の動画を作成します。';yes.textContent='次の動画を作成';yes.onclick=prepare;yes.disabled=false}
+ if(index===ranges.length){h.textContent='すべてのダウンロードを開始しました';status.textContent='「ファイル」のダウンロード先をご確認ください。写真へ移す場合は動画を開き「ビデオを保存」を選んでください。';yes.textContent='完了';yes.onclick=()=>close(true);cancel.hidden=true;yes.disabled=false}
+ else{h.textContent=index+' / '+ranges.length+'本のダウンロードを開始しました';status.textContent='次の動画を作成します。';yes.textContent='次の動画を作成';yes.onclick=prepare;yes.disabled=false}
  }catch(e){if(stopped)return;status.textContent=e.name==='AbortError'?'保存をキャンセルしました。同じ動画を保存し直せます。':e.message;yes.disabled=false}
  }
  yes.onclick=prepare;document.body.append(sheet);sheet.showModal();
@@ -54,7 +53,22 @@ async function deliverVideoFile(blob,ext){
  const d=document.createElement('dialog');d.className='clip-readiness';d.innerHTML='<h2>動画の保存準備完了</h2><p aria-live="polite">動画を保存してください。</p><button>動画を保存</button><button>閉じる</button>';
  const [save,close]=d.querySelectorAll('button'),status=d.querySelector('p');
  const finish=()=>{d.close();d.remove();resolve()};close.onclick=finish;d.oncancel=e=>{e.preventDefault();finish()};
- save.onclick=async()=>{save.disabled=true;try{const file=new File([blob],'In-GUTS.'+ext,{type:blob.type});if(navigator.canShare?.({files:[file]}))await navigator.share({files:[file]});else download(blob,ext);d.querySelector('h2').textContent='保存操作完了';status.textContent='保存先は端末でご確認ください。';save.hidden=true;close.textContent='完了'}catch(e){status.textContent=e.name==='AbortError'?'保存をキャンセルしました。もう一度保存できます。':'保存できませんでした。もう一度お試しください。'}finally{save.disabled=false}};
+ save.onclick=async()=>{save.disabled=true;try{const file=new File([blob],'In-GUTS.'+ext,{type:blob.type});downloadVideoFile(blob,'In-GUTS.'+ext);d.querySelector('h2').textContent='ダウンロードを開始しました';status.textContent='「ファイル」のダウンロード先をご確認ください。写真へ移す場合は動画を開き「ビデオを保存」を選んでください。';save.hidden=true;close.textContent='完了'}catch(e){status.textContent=e.name==='AbortError'?'保存をキャンセルしました。もう一度保存できます。':'保存できませんでした。もう一度お試しください。'}finally{save.disabled=false}};
  document.body.append(d);d.showModal();
  });
+}
+
+function downloadVideoFile(blob,name){const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),300000);}
+
+// Share completion does not prove that the Photos destination was chosen.
+let photoSharePending=false;
+async function saveVideoToPhotos(blob,ext){
+ if(photoSharePending)throw Error('共有画面を閉じてから、もう一度お試しください。');
+ const file=new File([blob],'In-GUTS.'+ext,{type:blob.type});
+ if(!navigator.share||!navigator.canShare?.({files:[file]}))throw Error('この画面では写真への保存を開けません。SafariでIn GUTSを開くか、動画ファイルを保存して「ファイル」から「ビデオを保存」を選んでください。');
+ photoSharePending=true;let timer;
+ let sharing;try{sharing=Promise.resolve(navigator.share({files:[file]}))}catch(e){photoSharePending=false;throw e;}
+ sharing.finally(()=>{photoSharePending=false}).catch(()=>{});
+ try{await Promise.race([sharing,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('共有画面から応答がありません。共有画面を閉じてください。動画は保持されています。Safariでの利用、または下のファイル保存をご利用ください。')),20000)})])}
+ finally{clearTimeout(timer)}
 }

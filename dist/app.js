@@ -25,10 +25,10 @@ function clearVideoBatch(){
  videoBatch=null;document.querySelector('#videoBatch')?.remove();document.body.classList.remove('video-batch');
  try{sessionStorage.removeItem('inguts-video-job')}catch{}
 }
-async function saveSelectedVideos(files){
+async function saveSelectedVideos(files, recovered=null){
  if(busy)return;
  if(!videoBatch||videoBatch.files!==files){
-  videoBatch={files,blob:null,running:false};
+  videoBatch={files,blob:recovered?.blob||null,running:false,persisted:!!recovered};
   media.forEach(m=>m.el.pause?.());window.resetVideoTimeline?.();
  }
  const batch=videoBatch;
@@ -37,8 +37,8 @@ async function saveSelectedVideos(files){
  document.body.classList.add('video-batch');$('#empty').hidden=true;
  root.innerHTML='<h2></h2><strong role="status"></strong><progress max="100" value="0"></progress><p aria-live="polite"></p><ol></ol><button class="batch-primary"></button><button class="batch-stop">処理を中止</button><button class="batch-choose">動画を選び直す</button>';
  const title=root.querySelector('h2'),status=root.querySelector('p'),percent=root.querySelector('strong'),bar=root.querySelector('progress'),primary=root.querySelector('.batch-primary'),stop=root.querySelector('.batch-stop'),chooseAgain=root.querySelector('.batch-choose');
- title.textContent=files.length+'本の動画を結合';
- files.forEach((f,i)=>{const li=document.createElement('li');li.textContent=(i+1)+'. '+f.name;root.querySelector('ol').append(li)});
+ title.textContent=(recovered?.count||files.length)+'本の動画を結合';
+ files.forEach((f,i)=>{const li=document.createElement('li');li.textContent=f.name;root.querySelector('ol').append(li)});
  chooseAgain.onclick=()=>{if(!busy)openFile()};
  const progress=n=>{bar.value=n;percent.textContent=n+'%'};
  const remember=state=>{try{sessionStorage.setItem('inguts-video-job',JSON.stringify({count:files.length,state}))}catch{}};
@@ -47,17 +47,18 @@ async function saveSelectedVideos(files){
  if(busy)return;busy=true;primary.disabled=true;chooseAgain.hidden=true;
  try{
   const ext=batch.blob.type.includes('webm')?'webm':'mp4',file=new File([batch.blob],'In-GUTS.'+ext,{type:batch.blob.type});
-  if(navigator.canShare?.({files:[file]}))await navigator.share({files:[file]});else download(batch.blob,ext);
-  progress(100);title.textContent='保存操作完了';try{sessionStorage.removeItem('inguts-video-job')}catch{};
-  idle('保存先は端末でご確認ください。結合した動画はここから保存し直せます。','もう一度保存',save);
- }catch(e){idle(e.name==='AbortError'?'保存をキャンセルしました。結合済み動画は残っています。':'保存できませんでした。結合済み動画は残っています。もう一度お試しください。','動画を保存',save)}
+  await saveVideoToPhotos(batch.blob,ext);
+  progress(99);title.textContent='写真への保存操作';try{sessionStorage.removeItem('inguts-video-job')}catch{};
+  idle('共有画面で「ビデオを保存」を選んでください。写真への保存結果はアプリから確認できません。','もう一度保存',save);
+ }catch(e){idle(e.name==='AbortError'?'保存をキャンセルしました。結合済み動画は残っています。':(e.message||'保存できませんでした。')+' 結合済み動画は残っています。','動画を保存',save)}
  }
  async function ready(){
-  const duration=await videoDuration(batch.blob);
+  let duration=null;videoDuration(batch.blob).then(value=>{duration=value}).catch(()=>{});
+  if(!root.querySelector('.batch-download')){const link=document.createElement('a');link.className='batch-download';link.textContent='動画ファイルをダウンロード';link.href=URL.createObjectURL(batch.blob);link.download='In-GUTS.'+(batch.blob.type.includes('webm')?'webm':'mp4');link.style.cssText='display:block;padding:20px;text-align:center';root.append(link);batch.downloadUrl=link.href;}
   progress(99);title.textContent='結合完了・保存準備完了';remember('ready');
-  idle('「動画を保存」を押してください。元動画は変更していません。','動画を保存',async()=>{
+  idle('「写真に保存」を押し、共有画面の「ビデオを保存」を選んでください。元動画は変更していません。','写真に保存',async()=>{
    if(busy)return;busy=true;primary.disabled=true;
-   try{if(!await offerVideoSplit(batch.blob,duration)){busy=false;await save()}}
+   try{if(duration===null||duration<=300){busy=false;await save()}else if(!await offerVideoSplit(batch.blob,duration)){busy=false;await save()}}
    catch(e){status.textContent=e.message+' 結合済み動画は残っています。'}
    finally{busy=false;primary.disabled=false}
   });
@@ -69,6 +70,11 @@ async function saveSelectedVideos(files){
   const controller=new AbortController();let worker,timer;
   stop.onclick=()=>controller.abort();
   try{
+   if(!batch.persisted){
+    status.textContent='中断に備えて動画を端末内に保持しています。';
+    try{await videoDraft.write({files,blob:null});batch.persisted=true}catch(e){status.textContent='端末内の空き容量が不足しているため、中断後の復元はできません。'}
+   }
+   if(controller.signal.aborted)throw new DOMException('中止しました','AbortError');
    if(!batch.blob){
     try{batch.blob=await new Promise((resolve,reject)=>{
      const fail=(message,fallback=false)=>reject(Object.assign(new Error(message),{fallback}));
@@ -84,14 +90,16 @@ async function saveSelectedVideos(files){
     }
    }
    if(controller.signal.aborted)throw new DOMException('中止しました','AbortError');
+   clearTimeout(timer);worker?.terminate();
+   try{await videoDraft.write({files:[],blob:batch.blob,count:files.length})}catch{}
    await ready();
   }catch(e){
    title.textContent=e.name==='AbortError'?'結合を中止しました':'結合を完了できませんでした';remember('retry');
    idle((e.name==='AbortError'?'':e.message+' ')+files.length+'本の選択は残っています。選び直さずに再試行できます。','同じ動画で再試行',run);
   }finally{clearTimeout(timer);worker?.terminate();batch.running=false;busy=false;$('#save').disabled=false}
  }
- batch.resume=()=>batch.blob?ready():run();
- if(batch.blob)await ready();else await run();
+ batch.resume=()=>batch.blob?primary.click():run();
+ if(recovered&&!batch.blob){idle('前回の動画を復元しました。ダウンロードし直さずに再開できます。','結合を再開',run)}else if(batch.blob)await ready();else await run();
 }
 $('#file').onchange=async e=>{const files=[...e.target.files];if(!files.length)return;if(mode==='collage')return loadCollageImages(files);if(mode==='video'&&files.length>1){await saveSelectedVideos(files);return}clearVideoBatch();let accepted=mode==='collage'?files.slice(0,20-media.length):files.slice(0,1);if(!accepted.length)return toast('写真は20枚までです');try{for(const f of accepted){if(mode==='video'&&!f.type.startsWith('video/'))throw Error('動画を選んでください');if(mode!=='video'&&!f.type.startsWith('image/'))throw Error('画像を選んでください');let url=URL.createObjectURL(f),el=mode==='video'?document.createElement('video'):new Image(),type=mode==='video'?'video':'image';if(type==='video'){el.playsInline=true;el.preload='metadata';await new Promise((res,rej)=>{el.onloadedmetadata=res;el.onerror=()=>{URL.revokeObjectURL(url);rej(Error('この動画形式を読み込めません'))};el.src=url;});el.onloadeddata=()=>{if(media.some(m=>m.el===el))draw()};el.preload='auto';if(!Number.isFinite(el.duration))throw Error('動画の長さを取得できません');el.ontimeupdate=()=>{if(!busy&&el.currentTime>=end){el.pause();$('#play').textContent='▶'}$('#scrub').value=el.currentTime;$('#time').textContent=fmt(el.currentTime)+' / '+fmt(end)};el.onseeked=()=>draw();el.onended=()=>{$('#play').textContent='▶';draw()}}else{el.decoding='async';await new Promise((resolve,reject)=>{el.onload=resolve;el.onerror=()=>reject(Error('画像を読み込めません'));el.src=url});}if(mode!=='collage'){media.forEach(m=>{m.el.pause?.();URL.revokeObjectURL(m.url)});media=[];history=[];future=[];pendingHistory=null;if(audioCtx){await audioCtx.close();audioCtx=null;audioSource=null;audioDest=null}}media.push({originalFile:type==='video'?f:null,el,url,type,name:f.name,rotation:0,zoom:type==='image'&&mode==='photo'?Math.max(1,el.naturalWidth/el.naturalHeight):1,offsetX:0,offsetY:0});if(type==='video'){start=0;end=el.duration;$('#scrub').max=end;let w=el.videoWidth,h=el.videoHeight;ratio=w>h?'16:9':w<h?'9:16':'1:1';el.playbackRate=speed;el.volume=volume}else if(mode==='photo')ratio='1:1';}$('#empty').hidden=true;resize();thumbs();if(mode==='video'){const current=media[0];setTimeout(()=>{if(media[0]===current)buildVideoFilmstrip()},800);}if(mode==='collage'){showCollagePicker()}else if(active)panel(active)}catch(e){toast(e.message||'読み込みに失敗しました')}};
 function thumbs(){$('#thumbs').replaceChildren();if(mode==='collage')return;media.forEach((m,i)=>{let b=document.createElement('button');b.title=mode==='collage'?'タップでこの写真を削除':m.name;if(m.type==='image'){let img=new Image();img.src=m.url;b.append(img)}else{let s=document.createElement('span');s.textContent='▶ '+m.name;b.append(s)}b.onclick=()=>{if(mode==='collage'&&!busy&&confirm('この写真を外しますか？')){URL.revokeObjectURL(m.url);media.splice(i,1);history=[];future=[];pendingHistory=null;thumbs();draw();$('#empty').hidden=media.length>0}};$('#thumbs').append(b)})}
@@ -184,7 +192,7 @@ function paintPanel(){painting=false;active='paint';document.body.dataset.panel=
 function stretchLine(l,p,side){const a=l.angle||0,half=l.width/2,fx=l.x*viewWidth-side*Math.cos(a)*half,fy=l.y*viewHeight-side*Math.sin(a)*half,px=p.x*viewWidth,py=p.y*viewHeight;l.width=Math.max(20,Math.hypot(px-fx,py-fy));l.x=(px+fx)/2/viewWidth;l.y=(py+fy)/2/viewHeight;l.angle=Math.atan2(side*(py-fy),side*(px-fx))}
 function freehandPanel(){document.body.dataset.panel='paint';active='paint';painting=true;selected=-1;draw();let p=$('#panel');p.innerHTML=panelTop('落書き')+'<div class="row">◉ <input aria-label="ペンの太さ" id="penSize" type="range" min="1" max="35" value="'+penSize+'"></div><input aria-label="ペンの色" id="penHue" type="range" min="0" max="360" value="0" class="rainbow"><div class="pen-types"><button id="whitePen">〰</button><button id="blackPen">〰</button><button id="yellowPen">〰</button><button id="undoPen">↶</button><input id="penColor" aria-label="色を指定" type="color" value="#E8DFD3"></div>';$('#penSize').oninput=e=>penSize=+e.target.value;$('#penHue').oninput=e=>penColor=['#E8DFD3','#D6C8B6','#3F3A36','#8B857E','#4F6B57'][Math.min(4,Math.floor(+e.target.value/73))];$('#penColor').oninput=e=>penColor=e.target.value;$('#whitePen').onclick=()=>penColor='#E8DFD3';$('#blackPen').onclick=()=>penColor='#3F3A36';$('#yellowPen').onclick=()=>penColor='#4F6B57';$('#undoPen').onclick=()=>{let i=layers.map(l=>l.kind).lastIndexOf('path');if(i>=0){mark();layers.splice(i,1);draw()}}}
 
-let lastExport=null;function download(blob,ext){lastExport={blob,ext};const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='In-GUTS-'+Date.now()+'.'+ext;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000)}
+let lastExport=null;function download(blob,ext){lastExport={blob,ext};const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='In-GUTS-'+Date.now()+'.'+ext;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),300000)}
 // Keep editor coordinates and preview buffers small; render originals only for export.
 function stillExportSize(){
  const w=viewWidth,h=viewHeight,n=media.length;
@@ -280,7 +288,7 @@ photoGestureSurface.addEventListener('gesturechange',e=>{if(e.cancelable)e.preve
 
 async function exportDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open('guts-cut-exports',1);r.onupgradeneeded=()=>r.result.createObjectStore('files');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(Error('保存できませんでした。空き容量をご確認ください'));})}
 async function retainExport(blob,ext){const db=await exportDB();try{await new Promise((resolve,reject)=>{const tx=db.transaction('files','readwrite');tx.objectStore('files').put({blob,ext},'latest');tx.oncomplete=resolve;tx.onerror=tx.onabort=()=>reject(Error('保存できませんでした。空き容量をご確認ください'));});lastExport={blob,ext};}finally{db.close()}}
-async function saveToDevice(blob,ext){const file=new File([blob],'In-GUTS.'+ext,{type:blob.type});if(navigator.canShare?.({files:[file]})){await navigator.share({files:[file]});return true;}download(blob,ext);return false;}
+async function saveToDevice(blob,ext){if(blob.type.startsWith('video/')||['mp4','mov','webm'].includes(ext)){download(blob,ext);return false;}const file=new File([blob],'In-GUTS.'+ext,{type:blob.type});if(navigator.canShare?.({files:[file]})){await navigator.share({files:[file]});return true;}download(blob,ext);return false;}
 
 
 function removeCollagePhoto(index){if(busy||collageLoading||!media[index])return;const removed=media.splice(index,1)[0];URL.revokeObjectURL(removed.url);history=[];future=[];pendingHistory=null;drag=null;pinch=null;pointers.clear();selected=-1;collageSelection=new Set(media.map((_,i)=>i));closePanel();$('#empty').hidden=media.length>0;thumbs();resize();toast('写真を外しました（'+media.length+'枚）')}
@@ -298,4 +306,14 @@ function canvasPanel(tab='ratio'){
 $('#file').oncancel=()=>{closePanel();};
 
 // Explain a browser reload instead of silently presenting an empty editor.
-try{const interrupted=JSON.parse(sessionStorage.getItem('inguts-video-job')||'null');if(interrupted){const notice=document.createElement('p');notice.className='interrupted-video';notice.textContent='前回の動画処理が中断されました。ブラウザの再読み込み後は動画を再選択してください。元の動画は変更されていません。';$('#home').append(notice)}}catch{}
+try{const interrupted=JSON.parse(sessionStorage.getItem('inguts-video-job')||'null');if(interrupted){const notice=document.createElement('p');notice.className='interrupted-video';notice.textContent='前回の動画処理が中断されました。下に復元ボタンがある場合は、選択し直さずに再開できます。元の動画は変更されていません。';$('#home').append(notice)}}catch{}
+
+// Restore completed output first: saving again never repeats conversion.
+videoDraft.read().then(job=>{
+ if(!job||videoBatch||media.length||busy)return;
+ const button=document.createElement('button');button.className='interrupted-video';
+ button.textContent=job.blob?'前回の結合済み動画を保存':'前回選んだ動画を復元';
+ button.onclick=async()=>{if(busy)return;mode='video';document.body.dataset.mode='video';$('#home').hidden=true;$('#editor').hidden=false;button.remove();await saveSelectedVideos(job.files||[],job)};
+ const discard=document.createElement('button');discard.textContent='前回の復元データを削除';discard.className='interrupted-video';discard.onclick=async()=>{await videoDraft.clear();button.remove();discard.remove()};
+ $('#home').append(button,discard);
+}).catch(()=>{});
