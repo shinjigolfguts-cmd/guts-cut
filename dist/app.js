@@ -57,8 +57,18 @@ async function saveSelectedVideos(files, recovered=null){
  }
  async function ready(){
   let duration=null;videoDuration(batch.blob).then(value=>{duration=value}).catch(()=>{});
-  if(!root.querySelector('.batch-download')){const link=document.createElement('a');link.className='batch-download';link.textContent='動画ファイルをダウンロード';link.href=URL.createObjectURL(batch.blob);link.download='In-GUTS.'+(batch.blob.type.includes('webm')?'webm':'mp4');link.style.cssText='display:block;padding:20px;text-align:center';root.append(link);batch.downloadUrl=link.href;}
-  progress(99);title.textContent='結合完了・保存準備完了';remember('ready');
+  if(!root.querySelector('.batch-download')){const link=document.createElement('a');link.className='batch-download';link.textContent='動画ファイルを保存（別の方法）';link.href=URL.createObjectURL(batch.blob);link.download='In-GUTS.'+(batch.blob.type.includes('webm')?'webm':'mp4');link.style.cssText='display:block;padding:20px;text-align:center';root.append(link);batch.downloadUrl=link.href;}
+  progress(100);title.textContent='動画の作成完了・端末への保存は未完了';remember('ready');
+  if(isEmbeddedIOS()){
+   idle('このアプリ内の写真保存画面では停止することがあります。まず動画ファイルを保存し、「ファイル」で開いて共有 →「ビデオを保存」を選んでください。写真への保存はまだ完了していません。','動画ファイルを保存',()=>{
+    downloadVideoFile(batch.blob,'In-GUTS.'+(batch.blob.type.includes('webm')?'webm':'mp4'));
+    status.textContent='ファイルの保存を要求しました。保存完了は確認できません。「ファイル」→ ダウンロードで動画を開き、共有 →「ビデオを保存」を選んでください。';
+   });
+   const help=document.createElement('p');help.textContent='ファイル保存も開けない場合：Safariで下のURLを開いてください。動画はSafariで選び直す必要があります。';
+   const address=document.createElement('input');address.readOnly=true;address.value=location.origin;address.setAttribute('aria-label','Safariで開くURL');address.onclick=()=>address.select();
+   if(!root.querySelector('[aria-label="Safariで開くURL"]'))root.append(help,address);
+   return;
+  }
   idle('「写真に保存」を押し、共有画面の「ビデオを保存」を選んでください。元動画は変更していません。','写真に保存',async()=>{
    if(busy)return;busy=true;primary.disabled=true;
    try{if(duration===null||duration<=300){busy=false;await save()}else if(!await offerVideoSplit(batch.blob,duration)){busy=false;await save()}}

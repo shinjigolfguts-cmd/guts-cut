@@ -60,15 +60,23 @@ async function deliverVideoFile(blob,ext){
 
 function downloadVideoFile(blob,name){const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),300000);}
 
-// Share completion does not prove that the Photos destination was chosen.
+// iOS embedded web views can expose Web Share while their host sheet never resolves.
+// Only offer file sharing by default in Safari / installed web apps on iOS.
+function isEmbeddedIOS(){
+ const ua=navigator.userAgent||'';
+ const ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+ const standalone=navigator.standalone===true||window.matchMedia?.('(display-mode: standalone)').matches;
+ return ios&&!standalone&&(!/Version\/.*Safari\//.test(ua)||/ChatGPT|CriOS|FxiOS|EdgiOS|OPiOS/.test(ua));
+}
 let photoSharePending=false;
 async function saveVideoToPhotos(blob,ext){
+ if(isEmbeddedIOS())throw Error('このアプリ内では写真の保存画面が停止するため、共有を開きません。下の「動画ファイルを保存」を使うか、SafariでIn GUTSを開いてください。Safariへの切り替え時は動画を選び直す必要があります。');
  if(photoSharePending)throw Error('共有画面を閉じてから、もう一度お試しください。');
- const file=new File([blob],'In-GUTS.'+ext,{type:blob.type});
- if(!navigator.share||!navigator.canShare?.({files:[file]}))throw Error('この画面では写真への保存を開けません。SafariでIn GUTSを開くか、動画ファイルを保存して「ファイル」から「ビデオを保存」を選んでください。');
+ const file=new File([blob],'In-GUTS.'+ext,{type:blob.type.split(';')[0]});
+ if(!navigator.share||!navigator.canShare?.({files:[file]}))throw Error('写真への共有に対応していません。「動画ファイルを保存」を使ってください。');
  photoSharePending=true;let timer;
  let sharing;try{sharing=Promise.resolve(navigator.share({files:[file]}))}catch(e){photoSharePending=false;throw e;}
  sharing.finally(()=>{photoSharePending=false}).catch(()=>{});
- try{await Promise.race([sharing,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('共有画面から応答がありません。共有画面を閉じてください。動画は保持されています。Safariでの利用、または下のファイル保存をご利用ください。')),20000)})])}
+ try{await Promise.race([sharing,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('共有画面から応答がありません。共有画面を閉じて「動画ファイルを保存」を使ってください。結合済み動画は保持しています。')),15000)})])}
  finally{clearTimeout(timer)}
 }

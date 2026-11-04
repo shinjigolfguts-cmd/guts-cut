@@ -2,7 +2,7 @@
   "schema_version": 1,
   "project_id": "appgprj_6ae595af47b0819185f5e11d6e65ceea",
   "direction": "sites-to-github",
-  "source_commit": "c6ec7095077d6e21c2f09410c48c463d4cf4355c",
+  "source_commit": "91fe4111daf95a6686e0b6d69bdc531564c888db",
   "files": {
     ".openai/hosting.json": {
       "mode": "100644",
@@ -10,7 +10,7 @@
     },
     "dist/app.js": {
       "mode": "100644",
-      "sha": "f4ce5b8a4550ee375f051d7fa9b72d95bba547f5"
+      "sha": "2aa5b4e7d842ebdfe60a20ae6f792cec988e8f52"
     },
     "dist/assets/home-reference.jpeg": {
       "mode": "100644",
@@ -34,7 +34,7 @@
     },
     "dist/index.html": {
       "mode": "100644",
-      "sha": "314d385aab3d81e306d04bc4b480ef3a84c9c95e"
+      "sha": "a2fbead78e6e44c536e4d5a25afaea5ed677d9bb"
     },
     "dist/manifest.webmanifest": {
       "mode": "100644",
@@ -46,7 +46,7 @@
     },
     "dist/video-delivery.js": {
       "mode": "100644",
-      "sha": "4bd85f0e0d808689f53ee621e21b2cd70b4e243f"
+      "sha": "46312374d70b4312f7f8eda8b59e2a80ced6b6c2"
     },
     "dist/video-draft.js": {
       "mode": "100644",
@@ -79,6 +79,10 @@
     "docs/video-save-20261104.md": {
       "mode": "100644",
       "sha": "796f9aceee4355065bc0d747198e67df22b72baf"
+    },
+    "docs/video-share-20261104.md": {
+      "mode": "100644",
+      "sha": "0e46f5924fa3b62ef0f904de8e75cd87526c4ef8"
     }
   }
 }
