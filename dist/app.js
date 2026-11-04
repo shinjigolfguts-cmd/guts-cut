@@ -14,22 +14,25 @@ function stepHistory(redo=false){if(busy)return;flushHistory();const from=redo?f
 $('#undo').onclick=()=>stepHistory();$('#redo').onclick=()=>stepHistory(true);
 function resize(){let [w,h]=ratio.split(':').map(Number);viewWidth=w>=h?720:Math.round(720*w/h);viewHeight=h>=w?720:Math.round(720*h/w);const density=mode==='video'?1:Math.max(2,Math.min(3,window.devicePixelRatio||1));canvas.width=Math.round(viewWidth*density);canvas.height=Math.round(viewHeight*density);draw()}
 let collageLoadGeneration=0,collageLoading=false;
-function reset(){clearVideoBatch();collageLoadGeneration++;collageLoading=false;media.forEach(m=>{if(m.type==='video')m.el.pause();URL.revokeObjectURL(m.url)});media=[];layers=[];history=[];future=[];pendingHistory=null;selected=-1;window.resetVideoTimeline?.();ratio='1:1';filter='none';speed=volume=1;start=end=gap=0;bg='#FFFFFF';layout='grid';audioSource=null;audioDest=null;if(audioCtx){audioCtx.close();audioCtx=null}$('#thumbs').replaceChildren();$('#empty').hidden=false;$('#panel').classList.remove('open');active='';document.body.dataset.panel='';painting=false;$('#toolbar').hidden=false;resize()}
+function reset(){hideVideoImport();clearVideoBatch();collageLoadGeneration++;collageLoading=false;media.forEach(m=>{if(m.type==='video')m.el.pause();URL.revokeObjectURL(m.url)});media=[];layers=[];history=[];future=[];pendingHistory=null;selected=-1;window.resetVideoTimeline?.();ratio='1:1';filter='none';speed=volume=1;start=end=gap=0;bg='#FFFFFF';layout='grid';audioSource=null;audioDest=null;if(audioCtx){audioCtx.close();audioCtx=null}$('#thumbs').replaceChildren();$('#empty').hidden=false;$('#panel').classList.remove('open');active='';document.body.dataset.panel='';painting=false;$('#toolbar').hidden=false;resize()}
 function choose(m){if(busy)return;reset();mode=m;$('#home').hidden=true;$('#editor').hidden=false;$('#modeTitle').textContent='編集';document.body.dataset.mode=m;$('.preview').after($('.playbar'));let keys=m==='video'?['canvas','filter','text','sticker','trim','speed','volume','rotate']:m==='collage'?['canvas','addphoto','gallery','layout','paint','text','sticker','border','filter','effect','effects','rotate']:['canvas','paint','filter','effect','effects','portrait','sticker','text','pip','rotate'];$('#panel').after($('#toolbar'));$('#toolbar').innerHTML=keys.map(k=>`<button data-tool="${k}"><b>${uiIcon(k)}</b><span>${icons[k][1]}</span></button>`).join('');document.body.dataset.panel='';$('#batchEdit').hidden=m!=='photo';openFile()}
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>choose(b.dataset.mode));$('#toolbar').onclick=e=>{let b=e.target.closest('[data-tool]');if(b&&!busy)panel(b.dataset.tool)};
-function openFile(){if(busy||collageLoading)return;if(mode==='video')enableSnapFeedback();$('#file').accept=mode==='video'?'video/*':'image/*';$('#file').multiple=mode!=='photo';$('#file').value='';$('#file').click()}$('#add').onclick=openFile;$('#back').onclick=()=>{if(busy)return;if(active){closePanel();return}media.forEach(m=>m.el.pause?.());$('#collagePicker').hidden=true;$('#editor').hidden=true;$('#home').hidden=false;let resume=$('#resumeEdit');if(!resume){resume=document.createElement('button');resume.id='resumeEdit';resume.textContent='編集中の作品に戻る';$('#home').append(resume)}resume.hidden=!media.length&&!videoBatch;resume.onclick=()=>{$('#home').hidden=true;$('#editor').hidden=false;resize()}};$('#closeDialog').onclick=()=>$('#dialog').close();
+function openFile(){if(busy||collageLoading)return;if(mode==='video')enableSnapFeedback();$('#file').accept=mode==='video'?'video/*':'image/*';$('#file').multiple=mode!=='photo';$('#file').value='';if(mode==='video')showVideoImport('動画を選択しています。決定後、読み込み状況をここに表示します。');$('#file').click()}$('#add').onclick=openFile;$('#back').onclick=()=>{if(busy)return;if(active){closePanel();return}media.forEach(m=>m.el.pause?.());$('#collagePicker').hidden=true;$('#editor').hidden=true;$('#home').hidden=false;let resume=$('#resumeEdit');if(!resume){resume=document.createElement('button');resume.id='resumeEdit';resume.textContent='編集中の作品に戻る';$('#home').append(resume)}resume.hidden=!media.length&&!videoBatch;resume.onclick=()=>{$('#home').hidden=true;$('#editor').hidden=false;resize()}};$('#closeDialog').onclick=()=>$('#dialog').close();
 // A batch is an editor state, not a disposable modal over an empty canvas.
 let videoBatch=null;
 function clearVideoBatch(){
  if(videoBatch?.running)return;
+ if(videoBatch?.downloadUrl)URL.revokeObjectURL(videoBatch.downloadUrl);
  videoBatch=null;document.querySelector('#videoBatch')?.remove();document.body.classList.remove('video-batch');
  try{sessionStorage.removeItem('inguts-video-job')}catch{}
 }
 async function saveSelectedVideos(files, recovered=null){
  if(busy)return;
  if(!videoBatch||videoBatch.files!==files){
+  clearVideoBatch();
   videoBatch={files,blob:recovered?.blob||null,running:false,persisted:!!recovered};
-  media.forEach(m=>m.el.pause?.());window.resetVideoTimeline?.();
+  window.resetVideoTimeline?.();
+  media.forEach(m=>{m.el.pause?.();m.el.removeAttribute('src');m.el.load?.();URL.revokeObjectURL(m.url)});media=[];layers=[];history=[];future=[];pendingHistory=null;
  }
  const batch=videoBatch;
  let root=document.querySelector('#videoBatch');
@@ -72,7 +75,7 @@ async function saveSelectedVideos(files, recovered=null){
   try{
    if(!batch.persisted){
     status.textContent='中断に備えて動画を端末内に保持しています。';
-    try{await videoDraft.write({files,blob:null});batch.persisted=true}catch(e){status.textContent='端末内の空き容量が不足しているため、中断後の復元はできません。'}
+    try{await videoDraft.write({files,blob:null},{signal:controller.signal,onProgress:(done,total)=>{status.textContent='動画を端末内に保持しています（'+done+' / '+total+'本）';}});batch.persisted=true}catch(e){status.textContent='端末内の空き容量が不足しているため、中断後の復元はできません。'}
    }
    if(controller.signal.aborted)throw new DOMException('中止しました','AbortError');
    if(!batch.blob){
@@ -101,7 +104,36 @@ async function saveSelectedVideos(files, recovered=null){
  batch.resume=()=>batch.blob?primary.click():run();
  if(recovered&&!batch.blob){idle('前回の動画を復元しました。ダウンロードし直さずに再開できます。','結合を再開',run)}else if(batch.blob)await ready();else await run();
 }
-$('#file').onchange=async e=>{const files=[...e.target.files];if(!files.length)return;if(mode==='collage')return loadCollageImages(files);if(mode==='video'&&files.length>1){await saveSelectedVideos(files);return}clearVideoBatch();let accepted=mode==='collage'?files.slice(0,20-media.length):files.slice(0,1);if(!accepted.length)return toast('写真は20枚までです');try{for(const f of accepted){if(mode==='video'&&!f.type.startsWith('video/'))throw Error('動画を選んでください');if(mode!=='video'&&!f.type.startsWith('image/'))throw Error('画像を選んでください');let url=URL.createObjectURL(f),el=mode==='video'?document.createElement('video'):new Image(),type=mode==='video'?'video':'image';if(type==='video'){el.playsInline=true;el.preload='metadata';await new Promise((res,rej)=>{el.onloadedmetadata=res;el.onerror=()=>{URL.revokeObjectURL(url);rej(Error('この動画形式を読み込めません'))};el.src=url;});el.onloadeddata=()=>{if(media.some(m=>m.el===el))draw()};el.preload='auto';if(!Number.isFinite(el.duration))throw Error('動画の長さを取得できません');el.ontimeupdate=()=>{if(!busy&&el.currentTime>=end){el.pause();$('#play').textContent='▶'}$('#scrub').value=el.currentTime;$('#time').textContent=fmt(el.currentTime)+' / '+fmt(end)};el.onseeked=()=>draw();el.onended=()=>{$('#play').textContent='▶';draw()}}else{el.decoding='async';await new Promise((resolve,reject)=>{el.onload=resolve;el.onerror=()=>reject(Error('画像を読み込めません'));el.src=url});}if(mode!=='collage'){media.forEach(m=>{m.el.pause?.();URL.revokeObjectURL(m.url)});media=[];history=[];future=[];pendingHistory=null;if(audioCtx){await audioCtx.close();audioCtx=null;audioSource=null;audioDest=null}}media.push({originalFile:type==='video'?f:null,el,url,type,name:f.name,rotation:0,zoom:type==='image'&&mode==='photo'?Math.max(1,el.naturalWidth/el.naturalHeight):1,offsetX:0,offsetY:0});if(type==='video'){start=0;end=el.duration;$('#scrub').max=end;let w=el.videoWidth,h=el.videoHeight;ratio=w>h?'16:9':w<h?'9:16':'1:1';el.playbackRate=speed;el.volume=volume}else if(mode==='photo')ratio='1:1';}$('#empty').hidden=true;resize();thumbs();if(mode==='video'){const current=media[0];setTimeout(()=>{if(media[0]===current)buildVideoFilmstrip()},800);}if(mode==='collage'){showCollagePicker()}else if(active)panel(active)}catch(e){toast(e.message||'読み込みに失敗しました')}};
+$('#file').onchange=async e=>{const files=[...e.target.files];if(!files.length)return;if(mode==='collage')return loadCollageImages(files);if(mode==='video'&&files.length>1){await saveSelectedVideos(files);return}clearVideoBatch();let accepted=mode==='collage'?files.slice(0,20-media.length):files.slice(0,1);if(!accepted.length)return toast('写真は20枚までです');try{for(const f of accepted){if(mode==='video'&&!f.type.startsWith('video/')&&!/\.(mov|mp4|m4v|webm)$/i.test(f.name))throw Error('動画を選んでください');if(mode!=='video'&&!f.type.startsWith('image/'))throw Error('画像を選んでください');let url=URL.createObjectURL(f),el=mode==='video'?document.createElement('video'):new Image(),type=mode==='video'?'video':'image';if(type==='video'){el.playsInline=true;el.preload='metadata';await new Promise((res,rej)=>{const finish=error=>{clearTimeout(timer);el.onloadedmetadata=null;el.onerror=null;if(error){el.removeAttribute('src');el.load();URL.revokeObjectURL(url);rej(error)}else res()};const timer=setTimeout(()=>finish(Error('動画の読み込みが停止しました。選択は保持しています。')),30000);el.onloadedmetadata=()=>finish();el.onerror=()=>finish(Error('この動画形式を読み込めません'));el.src=url;el.load();});el.onloadeddata=()=>{if(media.some(m=>m.el===el))draw()};el.preload='auto';if(!Number.isFinite(el.duration))throw Error('動画の長さを取得できません');el.ontimeupdate=()=>{if(!busy&&el.currentTime>=end){el.pause();$('#play').textContent='▶'}$('#scrub').value=el.currentTime;$('#time').textContent=fmt(el.currentTime)+' / '+fmt(end)};el.onseeked=()=>draw();el.onended=()=>{$('#play').textContent='▶';draw()}}else{el.decoding='async';await new Promise((resolve,reject)=>{el.onload=resolve;el.onerror=()=>reject(Error('画像を読み込めません'));el.src=url});}if(mode!=='collage'){media.forEach(m=>{m.el.pause?.();URL.revokeObjectURL(m.url)});media=[];history=[];future=[];pendingHistory=null;if(audioCtx){await audioCtx.close();audioCtx=null;audioSource=null;audioDest=null}}media.push({originalFile:type==='video'?f:null,el,url,type,name:f.name,rotation:0,zoom:type==='image'&&mode==='photo'?Math.max(1,el.naturalWidth/el.naturalHeight):1,offsetX:0,offsetY:0});if(type==='video'){start=0;end=el.duration;$('#scrub').max=end;let w=el.videoWidth,h=el.videoHeight;ratio=w>h?'16:9':w<h?'9:16':'1:1';el.playbackRate=speed;el.volume=volume}else if(mode==='photo')ratio='1:1';}$('#empty').hidden=true;resize();thumbs();if(mode==='video'){const current=media[0];setTimeout(()=>{if(media[0]===current)buildVideoFilmstrip()},800);}if(mode==='collage'){showCollagePicker()}else if(active)panel(active)}catch(e){if(mode==='video')throw e;toast(e.message||'読み込みに失敗しました')}};
+// Keep the picker/import transition visible, including failures before a batch exists.
+function hideVideoImport(){document.querySelector('#videoImport')?.remove();document.body.classList.remove('video-import')}
+function showVideoImport(message,retry=null){
+ let root=document.querySelector('#videoImport');if(!root){root=document.createElement('section');root.id='videoImport';$('#editor nav').after(root)}
+ document.body.classList.add('video-import');root.replaceChildren();
+ const heading=document.createElement('h2');heading.textContent=retry?'動画を読み込めませんでした':'動画の読み込み';
+ const status=document.createElement('p');status.setAttribute('role','status');status.textContent=message;root.append(heading,status);
+ if(retry){const again=document.createElement('button');again.textContent='同じ動画で再試行';again.onclick=retry;root.append(again)}
+ const pick=document.createElement('button');pick.textContent='動画を選び直す';pick.onclick=()=>{if(!busy)openFile()};root.append(pick);
+ $('#save').disabled=true;
+}
+const loadSelectedMedia=$('#file').onchange;
+async function importSelectedVideos(files){
+ if(busy)return;
+ if(!files.length){showVideoImport('動画を受け取れませんでした。もう一度選択してください。');return}
+ try{sessionStorage.setItem('inguts-video-job',JSON.stringify({state:'importing',count:files.length}))}catch{}
+ showVideoImport(files.length+'本の動画を読み込んでいます。');
+ if(files.length>1){
+  try{hideVideoImport();await saveSelectedVideos(files)}catch(error){busy=false;showVideoImport(error.message||'動画の読み込みに失敗しました。',()=>importSelectedVideos(files))}
+  return;
+ }
+ busy=true;
+ try{
+  await loadSelectedMedia({target:{files}});
+  hideVideoImport();try{sessionStorage.removeItem('inguts-video-job')}catch{}
+ }catch(error){showVideoImport(error.message||'動画の読み込みに失敗しました。',()=>importSelectedVideos(files))}
+ finally{busy=false;$('#save').disabled=!media.length&&!videoBatch?.blob}
+}
+$('#file').onchange=e=>{const files=Array.from(e.target.files||[]);if(mode==='video')return importSelectedVideos(files);return loadSelectedMedia(e)};
 function thumbs(){$('#thumbs').replaceChildren();if(mode==='collage')return;media.forEach((m,i)=>{let b=document.createElement('button');b.title=mode==='collage'?'タップでこの写真を削除':m.name;if(m.type==='image'){let img=new Image();img.src=m.url;b.append(img)}else{let s=document.createElement('span');s.textContent='▶ '+m.name;b.append(s)}b.onclick=()=>{if(mode==='collage'&&!busy&&confirm('この写真を外しますか？')){URL.revokeObjectURL(m.url);media.splice(i,1);history=[];future=[];pendingHistory=null;thumbs();draw();$('#empty').hidden=media.length>0}};$('#thumbs').append(b)})}
 function fmt(n){return Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0')}
 // Rotation assistance: deliberate twist, slower response, sticky cardinal angles.
@@ -303,17 +335,18 @@ function canvasPanel(tab='ratio'){
  if(tab==='background'){o.innerHTML='<label>背景色 <input id="canvasColor" type="color"></label>';$('#canvasColor').value=bg;$('#canvasColor').oninput=e=>{mark();bg=e.target.value;draw()}}
  if(tab==='zoom'){o.innerHTML='<label>写真のズーム <input id="canvasZoom" type="range" min="0.2" max="4" step="0.01" value="'+(media[0]?.zoom||1)+'"></label>';$('#canvasZoom').oninput=e=>{mark();media.forEach(m=>m.zoom=+e.target.value);draw()}}
 }
-$('#file').oncancel=()=>{closePanel();};
+$('#file').oncancel=()=>{if(busy)return;closePanel();if(mode==='video'){if(media.length||videoBatch){hideVideoImport();$('#save').disabled=false}else showVideoImport('動画の選択がキャンセルされました。下のボタンから選択できます。')}};
 
 // Explain a browser reload instead of silently presenting an empty editor.
 try{const interrupted=JSON.parse(sessionStorage.getItem('inguts-video-job')||'null');if(interrupted){const notice=document.createElement('p');notice.className='interrupted-video';notice.textContent='前回の動画処理が中断されました。下に復元ボタンがある場合は、選択し直さずに再開できます。元の動画は変更されていません。';$('#home').append(notice)}}catch{}
 
 // Restore completed output first: saving again never repeats conversion.
-videoDraft.read().then(job=>{
+videoDraft.peek().then(summary=>{
+ if(!summary)return;const job=summary;
  if(!job||videoBatch||media.length||busy)return;
  const button=document.createElement('button');button.className='interrupted-video';
  button.textContent=job.blob?'前回の結合済み動画を保存':'前回選んだ動画を復元';
- button.onclick=async()=>{if(busy)return;mode='video';document.body.dataset.mode='video';$('#home').hidden=true;$('#editor').hidden=false;button.remove();await saveSelectedVideos(job.files||[],job)};
+ button.onclick=async()=>{if(busy)return;busy=true;button.disabled=true;try{const restored=await videoDraft.read();if(!restored)throw Error('復元できる動画がありません');mode='video';document.body.dataset.mode='video';$('#home').hidden=true;$('#editor').hidden=false;hideVideoImport();busy=false;await saveSelectedVideos(restored.files||[],restored)}catch(e){toast(e.message)}finally{busy=false;button.disabled=false}};
  const discard=document.createElement('button');discard.textContent='前回の復元データを削除';discard.className='interrupted-video';discard.onclick=async()=>{await videoDraft.clear();button.remove();discard.remove()};
  $('#home').append(button,discard);
 }).catch(()=>{});
