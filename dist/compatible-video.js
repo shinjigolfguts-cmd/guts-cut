@@ -1,25 +1,36 @@
 // Render clips sequentially when their encoded tracks cannot share one container.
-async function renderCompatibleVideo(files, report, preparedAudio) {
+async function renderCompatibleVideo(files, report, preparedAudio, options = {}) {
  const mime=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'].find(t=>window.MediaRecorder?.isTypeSupported(t));
  if(!mime)throw Error('このブラウザでは変換できません。Safariで開いてください。');
  const ctx=preparedAudio||new AudioContext(),audio=ctx.createMediaStreamDestination(),video=document.createElement('video');
  video.playsInline=true;video.preload='auto';
  const output=document.createElement('canvas'),paint=output.getContext('2d'),chunks=[];
  let lastPercent=-1,source;
+ const signal=options.signal;const abort=()=>{throw new DOMException('キャンセルしました','AbortError')};
+ const check=()=>{if(signal?.aborted)abort()};
+ const onAbort=()=>failed(new DOMException('キャンセルしました','AbortError'));
+ let watchdog;
+ const wait=p=>Promise.race([p,failure]);
  const cancelFrame=()=>video.requestVideoFrameCallback?video.cancelVideoFrameCallback(frame):cancelAnimationFrame(frame);
  let url,stream,rec,frame,stop,failed;
  const failure=new Promise((_,reject)=>failed=reject);failure.catch(()=>{});
  try{
+ signal?.addEventListener('abort',onAbort,{once:true});check();
  await ctx.resume();source=ctx.createMediaElementSource(video);source.connect(audio);
  for(const [i,file] of files.entries()){
+ check();clearTimeout(watchdog);watchdog=setTimeout(()=>failed(Error('動画の読み込みが停止しました。もう一度お試しください。')),30000);
  if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(file);
  await Promise.race([failure,new Promise((resolve,reject)=>{video.onloadeddata=resolve;video.onerror=()=>reject(Error((i+1)+'本目を再生できません。'));video.src=url})]);
+ clearTimeout(watchdog);
+ const from=options.from||0,to=Math.min(options.to??video.duration,video.duration);
+ if(from>=to)throw Error('分割範囲が正しくありません');
+ if(from)await wait(new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('分割位置に移動できません')),10000);video.onseeked=()=>{clearTimeout(timer);resolve()};video.currentTime=from}));
  if(!i){output.width=video.videoWidth;output.height=video.videoHeight;stream=output.captureStream();stream.addTrack(audio.stream.getAudioTracks()[0]);rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:Math.max(12000000,output.width*output.height*8)});rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};rec.onerror=()=>failed(Error('動画の書き出しが中断されました。'));stop=new Promise(resolve=>rec.onstop=resolve)}
  const scale=Math.min(output.width/video.videoWidth,output.height/video.videoHeight),w=video.videoWidth*scale,h=video.videoHeight*scale;
- function draw(){paint.fillStyle='#000';paint.fillRect(0,0,output.width,output.height);paint.drawImage(video,(output.width-w)/2,(output.height-h)/2,w,h);const percent=Math.floor(98*(i+(video.currentTime/video.duration||0))/files.length);if(percent!==lastPercent){report(percent);lastPercent=percent}frame=video.requestVideoFrameCallback?video.requestVideoFrameCallback(draw):requestAnimationFrame(draw)}
+ function draw(){paint.fillStyle='#000';paint.fillRect(0,0,output.width,output.height);paint.drawImage(video,(output.width-w)/2,(output.height-h)/2,w,h);const percent=Math.floor(98*(i+((video.currentTime-from)/(to-from)||0))/files.length);if(percent!==lastPercent){report(percent);lastPercent=percent}frame=video.requestVideoFrameCallback?video.requestVideoFrameCallback(draw):requestAnimationFrame(draw)}
  draw();if(!i)rec.start(1000);else rec.resume();
- await Promise.race([failure,new Promise((resolve,reject)=>{video.onended=resolve;video.onerror=()=>reject(Error((i+1)+'本目の再生に失敗しました。'));video.play().catch(reject)})]);cancelFrame();if(i+1<files.length)rec.pause()
+ await wait(new Promise((resolve,reject)=>{let last=video.currentTime,stalled=0;const finish=()=>{clearInterval(watchdog);video.pause();resolve()};watchdog=setInterval(()=>{if(video.currentTime>=to||video.ended)return finish();if(video.currentTime===last)stalled++;else stalled=0;last=video.currentTime;if(stalled>300){clearInterval(watchdog);reject(Error('動画の再生が停止しました。画面を開いたまま再試行してください。'))}},100);video.ontimeupdate=()=>{if(video.currentTime>=to)finish()};video.onended=finish;video.onerror=()=>reject(Error((i+1)+'本目の再生に失敗しました。'));video.play().catch(reject)}));cancelFrame();if(i+1<files.length)rec.pause()
  }
  rec.stop();await Promise.race([stop,failure]);if(!chunks.length)throw Error('動画を書き出せませんでした。');return new Blob(chunks,{type:mime.split(';')[0]})
- }finally{if(frame!=null)cancelFrame();if(rec&&rec.state!=='inactive')rec.stop();video.pause();video.removeAttribute('src');video.load();if(url)URL.revokeObjectURL(url);stream?.getTracks().forEach(t=>t.stop());source?.disconnect();audio.disconnect();if(!preparedAudio)await ctx.close()}
+ }finally{clearTimeout(watchdog);clearInterval(watchdog);signal?.removeEventListener('abort',onAbort);if(frame!=null)cancelFrame();if(rec&&rec.state!=='inactive')rec.stop();video.pause();video.removeAttribute('src');video.load();if(url)URL.revokeObjectURL(url);stream?.getTracks().forEach(t=>t.stop());source?.disconnect();audio.disconnect();if(!preparedAudio)await ctx.close()}
 }
