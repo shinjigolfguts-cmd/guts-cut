@@ -7,11 +7,19 @@ async function joinVideos(files, onReady = () => {}) {
  const enc=new TextEncoder(),dec=new TextDecoder(), box=(k,p)=>cat([word(p.length+8),enc.encode(k),p]);
  const children=a=>{let out=[];for(let i=0;i<a.length;){let n=u(a,i);if(n<8||i+n>a.length)fail();out.push({k:dec.decode(a.slice(i+4,i+8)),p:a.subarray(i+8,i+n)});i+=n}return out};
  const packs=[];let offset=0,first,header,mediaParts=[];
- for(const file of files){let moov,mdat;for(let i=0;i<file.size;){let h=new Uint8Array(await file.slice(i,i+16).arrayBuffer()),n=u(h,0)||file.size-i,k=dec.decode(h.slice(4,8));if(n===1)n=Number(view(h).getBigUint64(8));if(n<8||i+n>file.size)fail();
+ for(const file of files){let moov;const media=[];for(let i=0;i<file.size;){let h=new Uint8Array(await file.slice(i,i+16).arrayBuffer()),n=u(h,0)||file.size-i,k=dec.decode(h.slice(4,8));if(n===1)n=Number(view(h).getBigUint64(8));if(n<8||i+n>file.size)fail();
  if(k==='ftyp'&&!first){first=file.slice(i,i+n);offset=first.size}
  if(k==='moov'){if(n>64e6)fail();moov=children(new Uint8Array(await file.slice(i+8,i+n).arrayBuffer()))}
- if(k==='mdat'){if(mdat||!first||u(h,0)===0)fail();mdat={delta:offset-i,start:i,end:i+n};mediaParts.push(file.slice(i,i+n));offset+=n}i+=n}
- if(!moov||!mdat||moov.some(x=>x.k==='mvex'))fail();packs.push({moov,mdat});onReady(packs.length)}
+ if(k==='mdat'){
+  if(!first)fail();
+  const headerBytes=u(h,0)===1?16:8;
+  if(n<headerBytes)fail();
+  media.push({start:i+headerBytes,end:i+n,delta:offset-i});
+  if(u(h,0)===0){mediaParts.push(word(n),file.slice(i+4,i+n))}
+  else mediaParts.push(file.slice(i,i+n));
+  offset+=n
+ }i+=n}
+ if(!moov||!media.length||moov.some(x=>x.k==='mvex'))fail();packs.push({moov,media});onReady(packs.length)}
  const same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
  const gcd=(a,b)=>b?gcd(b,a%b):a;
  function trackClock(tracks){
@@ -58,7 +66,7 @@ async function joinVideos(files, onReady = () => {}) {
    else e.set(word(u(e,j)*ctx.factors[i]),j)
   }
  }
- if(k==='stco'||k==='co64'){let offsets=[];for(let j=0;j<e.length;j+=k==='stco'?4:8){let v=k==='stco'?u(e,j):Number(view(e).getBigUint64(j)),m=packs[i].mdat;if(v<m.start+8||v>=m.end)fail();let a=new Uint8Array(8);view(a).setBigUint64(0,BigInt(v+m.delta));offsets.push(a)}return cat(offsets)}return e});data=cat([p.slice(0,4),word(ps.reduce((n,a)=>n+u(a,4),0)),...entries])
+ if(k==='stco'||k==='co64'){let offsets=[];for(let j=0;j<e.length;j+=k==='stco'?4:8){let v=k==='stco'?u(e,j):Number(view(e).getBigUint64(j)),m=packs[i].media.find(range=>v>=range.start&&v<range.end);if(!m)fail();let a=new Uint8Array(8);view(a).setBigUint64(0,BigInt(v+m.delta));offsets.push(a)}return cat(offsets)}return e});data=cat([p.slice(0,4),word(ps.reduce((n,a)=>n+u(a,4),0)),...entries])
  }else if(k==='sbgp'){const n=p[0]===1?12:8;if(ps.some(a=>!same(a.slice(0,n),p.slice(0,n))))fail();data=cat([p.slice(0,n),word(ps.reduce((sum,a)=>sum+u(a,n),0)),...ps.map(a=>a.subarray(n+4))])}else if(k==='sdtp')data=cat([p.slice(0,4),...ps.map(a=>a.subarray(4))]);
  else if(['sgpd','stsd','dinf'].includes(k)&&ps.some(a=>!same(a,p)))fail();
  result.push(box(k==='stco'?'co64':k,data))}

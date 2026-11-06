@@ -61,16 +61,18 @@ async function deliverVideoFile(blob,ext){
 function downloadVideoFile(blob,name){const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),300000);}
 
 // iOS embedded web views can expose Web Share while their host sheet never resolves.
-// Only offer file sharing by default in Safari / installed web apps on iOS.
 function isEmbeddedIOS(){
  const ua=navigator.userAgent||'';
  const ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
  const standalone=navigator.standalone===true||window.matchMedia?.('(display-mode: standalone)').matches;
  return ios&&!standalone&&(!/Version\/.*Safari\//.test(ua)||/ChatGPT|CriOS|FxiOS|EdgiOS|OPiOS/.test(ua));
 }
+function videoSaveExtension(blob){
+ const type=blob.type.split(';')[0];
+ return type==='video/quicktime'?'mov':type==='video/webm'?'webm':'mp4';
+}
 let photoSharePending=false;
 async function saveVideoToPhotos(blob,ext){
- if(isEmbeddedIOS())throw Error('このアプリ内では写真の保存画面が停止するため、共有を開きません。下の「動画ファイルを保存」を使うか、SafariでIn GUTSを開いてください。Safariへの切り替え時は動画を選び直す必要があります。');
  if(photoSharePending)throw Error('共有画面を閉じてから、もう一度お試しください。');
  const file=new File([blob],'In-GUTS.'+ext,{type:blob.type.split(';')[0]});
  if(!navigator.share||!navigator.canShare?.({files:[file]}))throw Error('写真への共有に対応していません。「動画ファイルを保存」を使ってください。');

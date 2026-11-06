@@ -17,7 +17,7 @@ let collageLoadGeneration=0,collageLoading=false;
 function reset(){hideVideoImport();clearVideoBatch();collageLoadGeneration++;collageLoading=false;media.forEach(m=>{if(m.type==='video')m.el.pause();URL.revokeObjectURL(m.url)});media=[];layers=[];history=[];future=[];pendingHistory=null;selected=-1;window.resetVideoTimeline?.();ratio='1:1';filter='none';speed=volume=1;start=end=gap=0;bg='#FFFFFF';layout='grid';audioSource=null;audioDest=null;if(audioCtx){audioCtx.close();audioCtx=null}$('#thumbs').replaceChildren();$('#empty').hidden=false;$('#panel').classList.remove('open');active='';document.body.dataset.panel='';painting=false;$('#toolbar').hidden=false;resize()}
 function choose(m){if(busy)return;reset();mode=m;$('#home').hidden=true;$('#editor').hidden=false;$('#modeTitle').textContent='編集';document.body.dataset.mode=m;$('.preview').after($('.playbar'));let keys=m==='video'?['canvas','filter','text','sticker','trim','speed','volume','rotate']:m==='collage'?['canvas','addphoto','gallery','layout','paint','text','sticker','border','filter','effect','effects','rotate']:['canvas','paint','filter','effect','effects','portrait','sticker','text','pip','rotate'];$('#panel').after($('#toolbar'));$('#toolbar').innerHTML=keys.map(k=>`<button data-tool="${k}"><b>${uiIcon(k)}</b><span>${icons[k][1]}</span></button>`).join('');document.body.dataset.panel='';$('#batchEdit').hidden=m!=='photo';openFile()}
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>choose(b.dataset.mode));$('#toolbar').onclick=e=>{let b=e.target.closest('[data-tool]');if(b&&!busy)panel(b.dataset.tool)};
-function openFile(){if(busy||collageLoading)return;if(mode==='video')enableSnapFeedback();$('#file').accept=mode==='video'?'video/*':'image/*';$('#file').multiple=mode!=='photo';$('#file').value='';if(mode==='video')showVideoImport('動画を選択しています。決定後、読み込み状況をここに表示します。');$('#file').click()}$('#add').onclick=openFile;$('#back').onclick=()=>{if(busy)return;if(active){closePanel();return}media.forEach(m=>m.el.pause?.());$('#collagePicker').hidden=true;$('#editor').hidden=true;$('#home').hidden=false;let resume=$('#resumeEdit');if(!resume){resume=document.createElement('button');resume.id='resumeEdit';resume.textContent='編集中の作品に戻る';$('#home').append(resume)}resume.hidden=!media.length&&!videoBatch;resume.onclick=()=>{$('#home').hidden=true;$('#editor').hidden=false;resize()}};$('#closeDialog').onclick=()=>$('#dialog').close();
+function openFile(){if(busy||collageLoading)return;if(mode==='video'){enableSnapFeedback();prepareRenderPlayback()}$('#file').accept=mode==='video'?'video/*':'image/*';$('#file').multiple=mode!=='photo';$('#file').value='';if(mode==='video')showVideoImport('動画を選択しています。決定後、読み込み状況をここに表示します。');$('#file').click()}$('#add').onclick=openFile;$('#back').onclick=()=>{if(busy)return;if(active){closePanel();return}media.forEach(m=>m.el.pause?.());$('#collagePicker').hidden=true;$('#editor').hidden=true;$('#home').hidden=false;let resume=$('#resumeEdit');if(!resume){resume=document.createElement('button');resume.id='resumeEdit';resume.textContent='編集中の作品に戻る';$('#home').append(resume)}resume.hidden=!media.length&&!videoBatch;resume.onclick=()=>{$('#home').hidden=true;$('#editor').hidden=false;resize()}};$('#closeDialog').onclick=()=>$('#dialog').close();
 // A batch is an editor state, not a disposable modal over an empty canvas.
 let videoBatch=null;
 function clearVideoBatch(){
@@ -49,27 +49,17 @@ async function saveSelectedVideos(files, recovered=null){
  async function save(){
  if(busy)return;busy=true;primary.disabled=true;chooseAgain.hidden=true;
  try{
-  const ext=batch.blob.type.includes('webm')?'webm':'mp4',file=new File([batch.blob],'In-GUTS.'+ext,{type:batch.blob.type});
+  const ext=videoSaveExtension(batch.blob);
   await saveVideoToPhotos(batch.blob,ext);
-  progress(99);title.textContent='写真への保存操作';try{sessionStorage.removeItem('inguts-video-job')}catch{};
+  title.textContent='動画の共有操作が終了しました';try{sessionStorage.removeItem('inguts-video-job')}catch{};
   idle('共有画面で「ビデオを保存」を選んでください。写真への保存結果はアプリから確認できません。','もう一度保存',save);
  }catch(e){idle(e.name==='AbortError'?'保存をキャンセルしました。結合済み動画は残っています。':(e.message||'保存できませんでした。')+' 結合済み動画は残っています。','動画を保存',save)}
  }
  async function ready(){
   let duration=null;videoDuration(batch.blob).then(value=>{duration=value}).catch(()=>{});
-  if(!root.querySelector('.batch-download')){const link=document.createElement('a');link.className='batch-download';link.textContent='動画ファイルを保存（別の方法）';link.href=URL.createObjectURL(batch.blob);link.download='In-GUTS.'+(batch.blob.type.includes('webm')?'webm':'mp4');link.style.cssText='display:block;padding:20px;text-align:center';root.append(link);batch.downloadUrl=link.href;}
-  progress(100);title.textContent='動画の作成完了・端末への保存は未完了';remember('ready');
-  if(isEmbeddedIOS()){
-   idle('このアプリ内の写真保存画面では停止することがあります。まず動画ファイルを保存し、「ファイル」で開いて共有 →「ビデオを保存」を選んでください。写真への保存はまだ完了していません。','動画ファイルを保存',()=>{
-    downloadVideoFile(batch.blob,'In-GUTS.'+(batch.blob.type.includes('webm')?'webm':'mp4'));
-    status.textContent='ファイルの保存を要求しました。保存完了は確認できません。「ファイル」→ ダウンロードで動画を開き、共有 →「ビデオを保存」を選んでください。';
-   });
-   const help=document.createElement('p');help.textContent='ファイル保存も開けない場合：Safariで下のURLを開いてください。動画はSafariで選び直す必要があります。';
-   const address=document.createElement('input');address.readOnly=true;address.value=location.origin;address.setAttribute('aria-label','Safariで開くURL');address.onclick=()=>address.select();
-   if(!root.querySelector('[aria-label="Safariで開くURL"]'))root.append(help,address);
-   return;
-  }
-  idle('「写真に保存」を押し、共有画面の「ビデオを保存」を選んでください。元動画は変更していません。','写真に保存',async()=>{
+  if(!root.querySelector('.batch-download')){const link=document.createElement('a');link.className='batch-download';link.textContent='動画ファイルを保存（別の方法）';link.href=URL.createObjectURL(batch.blob);link.download='In-GUTS.'+videoSaveExtension(batch.blob);link.style.cssText='display:block;padding:20px;text-align:center';root.append(link);batch.downloadUrl=link.href;}
+  progress(100);percent.textContent='作成 100%';title.textContent='写真に保存する準備ができました';remember('ready');
+  idle('「保存」を押し、共有画面の「ビデオを保存」を選んでください。元動画は変更していません。','保存',async()=>{
    if(busy)return;busy=true;primary.disabled=true;
    try{if(duration===null||duration<=300){busy=false;await save()}else if(!await offerVideoSplit(batch.blob,duration)){busy=false;await save()}}
    catch(e){status.textContent=e.message+' 結合済み動画は残っています。'}
@@ -83,21 +73,21 @@ async function saveSelectedVideos(files, recovered=null){
   const controller=new AbortController();let worker,timer;
   stop.onclick=()=>controller.abort();
   try{
-   if(!batch.persisted){
-    status.textContent='中断に備えて動画を端末内に保持しています。';
-    try{await videoDraft.write({files,blob:null},{signal:controller.signal,onProgress:(done,total)=>{status.textContent='動画を端末内に保持しています（'+done+' / '+total+'本）';}});batch.persisted=true}catch(e){status.textContent='端末内の空き容量が不足しているため、中断後の復元はできません。'}
-   }
    if(controller.signal.aborted)throw new DOMException('中止しました','AbortError');
    if(!batch.blob){
     try{batch.blob=await new Promise((resolve,reject)=>{
      const fail=(message,fallback=false)=>reject(Object.assign(new Error(message),{fallback}));
-     worker=new Worker('video-join-worker.js?v=6');
+     worker=new Worker('video-join-worker.js?v=7');
      const arm=()=>{clearTimeout(timer);timer=setTimeout(()=>fail('動画の読み込みが停止しました。選択を保持したまま再試行できます。'),60000)};arm();
      controller.signal.addEventListener('abort',()=>{worker?.terminate();reject(new DOMException('中止しました','AbortError'))},{once:true});
      worker.onmessage=({data})=>{arm();if(data.error)fail(data.error,true);else if(data.blob)resolve(data.blob);else if(data.ready)progress(Math.floor(90*data.ready/files.length))};
      worker.onerror=()=>fail('結合処理を開始できませんでした。再試行してください。');worker.onmessageerror=()=>fail('動画データを受け取れませんでした。再試行してください。');worker.postMessage(files);
     })}catch(e){
      clearTimeout(timer);worker?.terminate();if(controller.signal.aborted||!e.fallback)throw e;
+   if(!batch.persisted){
+    status.textContent='中断に備えて動画を端末内に保持しています。';
+    try{await videoDraft.write({files,blob:null},{signal:controller.signal,onProgress:(done,total)=>{status.textContent='動画を端末内に保持しています（'+done+' / '+total+'本）';}});batch.persisted=true}catch(e){status.textContent='端末内の空き容量が不足しているため、中断後の復元はできません。'}
+   }
      status.textContent='撮影設定を合わせて結合しています。動画の再生時間に近い時間がかかります。';progress(0);
      batch.blob=await renderCompatibleVideo(files,n=>progress(n),window.rotationAudio,{signal:controller.signal});
     }
