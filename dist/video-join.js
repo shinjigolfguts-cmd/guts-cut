@@ -27,7 +27,8 @@ async function joinVideos(files, onReady = () => {}) {
   if(headers.some(md=>md[0]||!u(md,12)))fail();
   const scale=headers.reduce((a,md)=>{const b=u(md,12),v=a/gcd(a,b)*b;if(v>0xffffffff)fail();return v},1);
   const factors=headers.map(md=>scale/u(md,12));
-  return {scale,factors,ticks:headers.map((md,i)=>u(md,16)*factors[i])}
+  const handler=children(tracks[0].find(x=>x.k==='mdia').p).find(x=>x.k==='hdlr');
+  return {scale,factors,type:dec.decode(handler.p.subarray(8,12)),ticks:headers.map((md,i)=>u(md,16)*factors[i])}
  }
  function merge(groups,kind,ctx={}){
  let result=[],index=0;
@@ -42,8 +43,8 @@ async function joinVideos(files, onReady = () => {}) {
  const firstEntry=descriptions[0][0];if(!firstEntry)fail();
  ctx.entries=[];ctx.descriptionIds=descriptions.map(entries=>entries.map(entry=>{
  if(entry.k!==firstEntry.k)fail();
- const visual=['avc1','avc3','hvc1','hev1'].includes(entry.k),audio=entry.k==='mp4a';
- if(!same(entry.p,firstEntry.p)&&(!(visual||audio)||!same(entry.p.subarray(0,28),firstEntry.p.subarray(0,28))))fail();
+ const audio=entry.k==='mp4a';
+ if(!same(entry.p,firstEntry.p)&&(!audio||!same(entry.p.subarray(0,28),firstEntry.p.subarray(0,28))))fail();
  let index=ctx.entries.findIndex(x=>same(x.p,entry.p));if(index<0){index=ctx.entries.length;ctx.entries.push(entry)}return index+1
  }));
  ctx.samples=child.map(g=>u(g.find(x=>x.k==='stsz').p,8));ctx.chunks=child.map(g=>u(g.find(x=>['stco','co64'].includes(x.k)).p,4))}
@@ -53,8 +54,10 @@ async function joinVideos(files, onReady = () => {}) {
  const movieScale=u(packs[0].moov.find(x=>x.k==='mvhd').p,12);
  const start=p.length===20?view(p).getInt32(12)*ctx.factors[0]:-1;
  // A single continuous edit avoids seeking back to keyframes at each clip boundary.
- const contiguous=ctx.factors.some(f=>f!==1)&&start>=0&&ps.every((a,i)=>a.length===20&&!a[0]&&u(a,4)===1&&u(a,16)===65536&&
+ const contiguous=start>=0&&ps.every((a,i)=>a.length===20&&!a[0]&&u(a,4)===1&&u(a,16)===65536&&
   view(a).getInt32(12)*ctx.factors[i]===start&&u(a,8)===Math.round(ctx.ticks[i]*movieScale/ctx.scale));
+ // Multiple video edits force a decoder seek at each boundary and can expose empty frames.
+ if(ctx.type==='vide'&&!contiguous)fail();
  if(contiguous){if(start>2147483647)fail();data=p.slice();data.set(word(ps.reduce((sum,a)=>sum+u(a,8),0)),8);data.set(word(start),12)}
  else {let base=0;let entries=ps.map((a,i)=>{if(a[0])fail();let e=a.slice(8);for(let j=0;j<e.length;j+=12){let t=view(e).getInt32(j+4);if(t>=0){t*=ctx.factors[i];if(base+t>2147483647)fail();view(e).setInt32(j+4,t+base)}}base+=ctx.ticks[i];return e});data=cat([p.slice(0,4),word(entries.reduce((n,e)=>n+e.length/12,0)),...entries])}
  }else if(k==='stsd'){data=cat([p.slice(0,4),word(ctx.entries.length),...ctx.entries.map(x=>box(x.k,x.p))])

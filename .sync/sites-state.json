@@ -2,87 +2,115 @@
   "schema_version": 1,
   "project_id": "appgprj_6ae595af47b0819185f5e11d6e65ceea",
   "direction": "sites-to-github",
-  "source_commit": "54dd49c6507b868330a8843edc83cb6108e6eecc",
+  "source_commit": "ece2f44b4f6fb9ac70efd703c6400cdd6e5d2b17",
   "files": {
     ".openai/hosting.json": {
-      "mode": "100644",
-      "sha": "02c1b2b71ed5a9824db2ef890f60f1eab4157597"
+      "sha": "02c1b2b71ed5a9824db2ef890f60f1eab4157597",
+      "mode": "100644"
     },
     "dist/app.js": {
-      "mode": "100644",
-      "sha": "bf4a5ccbe303424eaa42e2bb8149c82aa84ab5a6"
+      "sha": "70dce0dc39ed71dc5d0167133da2e172006fba8a",
+      "mode": "100644"
     },
     "dist/assets/home-reference.jpeg": {
-      "mode": "100644",
-      "sha": "e22af64bc785151a32abcf13c08651893e2ae05c"
+      "sha": "e22af64bc785151a32abcf13c08651893e2ae05c",
+      "mode": "100644"
     },
     "dist/assets/in-guts-g-180.png": {
-      "mode": "100644",
-      "sha": "71556a74db99cc04bdd08593bfc7804e3d9f4792"
+      "sha": "71556a74db99cc04bdd08593bfc7804e3d9f4792",
+      "mode": "100644"
     },
     "dist/assets/in-guts-g-192.png": {
-      "mode": "100644",
-      "sha": "c702d2e727553bf3ef144b35c310b1f1045778f1"
+      "sha": "c702d2e727553bf3ef144b35c310b1f1045778f1",
+      "mode": "100644"
     },
     "dist/assets/in-guts-g-512.png": {
-      "mode": "100644",
-      "sha": "57e4780d93f53762c4f018ad521dfdb06b8fe289"
+      "sha": "57e4780d93f53762c4f018ad521dfdb06b8fe289",
+      "mode": "100644"
     },
     "dist/compatible-video.js": {
-      "mode": "100644",
-      "sha": "9dea8f584c9580e2c6b5b1e9c1cd87ca3c9bea09"
+      "sha": "ac45d049e2b65937495bf43c159949fd495ca6d4",
+      "mode": "100644"
+    },
+    "dist/fast-video.js": {
+      "sha": "7d434f214147a9dd59ed0654174439ddc140bde1",
+      "mode": "100644"
     },
     "dist/index.html": {
-      "mode": "100644",
-      "sha": "78bd9b08cdc274ad6dffafe858063c02fac73871"
+      "sha": "2f802e422c02ab11e52b42d9a7a9740b0b8ae4c7",
+      "mode": "100644"
     },
     "dist/manifest.webmanifest": {
-      "mode": "100644",
-      "sha": "90e7cffbc4a2c72430edf0aecce23349e5d9e164"
+      "sha": "90e7cffbc4a2c72430edf0aecce23349e5d9e164",
+      "mode": "100644"
     },
     "dist/style.css": {
-      "mode": "100644",
-      "sha": "73bd62cb2a24394fef1efb0247ba3d9deb4eff17"
+      "sha": "73bd62cb2a24394fef1efb0247ba3d9deb4eff17",
+      "mode": "100644"
+    },
+    "dist/vendor/NOTICE.txt": {
+      "sha": "0fc0f891e4b779da1a50476cd0b4b145ee15d65e",
+      "mode": "100644"
+    },
+    "dist/vendor/mediabunny-1.65.2.mjs": {
+      "sha": "fe5717d1d41e295b2cf41bdb2eb13a2031b20797",
+      "mode": "100644"
+    },
+    "dist/vendor/mediabunny-LICENSE.txt": {
+      "sha": "d0a1fa1482eea82e19510e7920cbe3a03e41f691",
+      "mode": "100644"
     },
     "dist/video-delivery.js": {
-      "mode": "100644",
-      "sha": "2323533f8b5a85f5ad3bfa3c3f5b308a99966276"
+      "sha": "2323533f8b5a85f5ad3bfa3c3f5b308a99966276",
+      "mode": "100644"
     },
     "dist/video-draft.js": {
-      "mode": "100644",
-      "sha": "d27a428d632ba1db4c3595b05362b67faed85ebe"
+      "sha": "13169e3804131dd35b710e4dec07679ec2c59d5b",
+      "mode": "100644"
+    },
+    "dist/video-export.js": {
+      "sha": "efa35c8a3c6735661b3baa3ff72b04aed68955f6",
+      "mode": "100644"
     },
     "dist/video-join-worker.js": {
-      "mode": "100644",
-      "sha": "3d1d149a47316702ce558083c002a08f07bb1415"
+      "sha": "ea5dadaf40e7573faf8a18d59d88b96c41e6390a",
+      "mode": "100644"
     },
     "dist/video-join.js": {
-      "mode": "100644",
-      "sha": "1dd3161c921e9c6d765226483990e04e97e6c287"
+      "sha": "49684b3bd3c0f429df65b17a321daf636e27edd8",
+      "mode": "100644"
     },
     "dist/video-timeline.js": {
-      "mode": "100644",
-      "sha": "63de2b50b8b967358fae6a7702d00a00f3523a75"
+      "sha": "63de2b50b8b967358fae6a7702d00a00f3523a75",
+      "mode": "100644"
     },
     "docs/reference-status.md": {
-      "mode": "100644",
-      "sha": "595053a413cfa15e3000681fd330e1399a6f2c6d"
+      "sha": "595053a413cfa15e3000681fd330e1399a6f2c6d",
+      "mode": "100644"
     },
     "docs/video-batch-recovery-20261104.md": {
-      "mode": "100644",
-      "sha": "fa41ab4cf9fac8348a100289c5abec7f911df8c8"
+      "sha": "fa41ab4cf9fac8348a100289c5abec7f911df8c8",
+      "mode": "100644"
+    },
+    "docs/video-export-20261107.md": {
+      "sha": "d2df1bd7e4afc7b0fcaae827936bce4b43d87f8a",
+      "mode": "100644"
     },
     "docs/video-import-20261104.md": {
-      "mode": "100644",
-      "sha": "c122f944f5fa70d80e2c74aa3c088d59021702c1"
+      "sha": "c122f944f5fa70d80e2c74aa3c088d59021702c1",
+      "mode": "100644"
     },
     "docs/video-save-20261104.md": {
-      "mode": "100644",
-      "sha": "796f9aceee4355065bc0d747198e67df22b72baf"
+      "sha": "796f9aceee4355065bc0d747198e67df22b72baf",
+      "mode": "100644"
     },
     "docs/video-share-20261104.md": {
-      "mode": "100644",
-      "sha": "0e46f5924fa3b62ef0f904de8e75cd87526c4ef8"
+      "sha": "0e46f5924fa3b62ef0f904de8e75cd87526c4ef8",
+      "mode": "100644"
+    },
+    "tests/video-regression.mjs": {
+      "sha": "e50d3f1e22e388449e651a03a37964184bc31b38",
+      "mode": "100644"
     }
   }
 }

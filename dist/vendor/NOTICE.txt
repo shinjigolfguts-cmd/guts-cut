@@ -1,0 +1,5 @@
+Mediabunny 1.65.2
+Copyright (c) 2024-present Vanilagy and contributors
+License: Mozilla Public License 2.0 (see mediabunny-LICENSE.txt)
+Unmodified minified module; source: https://registry.npmjs.org/mediabunny/-/mediabunny-1.65.2.tgz
+Project: https://github.com/Vanilagy/mediabunny
